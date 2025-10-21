@@ -17,7 +17,7 @@ const Home: React.FC = () => {
             >
               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="text-center text-white p-10 z-10">
-                <h2 className="text-5xl font-extrabold mb-5 tracking-tight">Update Master Sheet</h2>
+                <h2 className="text-5xl font-extrabold mb-5 tracking-tight">Update Master Gap Sheet</h2>
                 <p className="text-lg opacity-90 max-w-md leading-relaxed">Manage and update your master audit sheet with the latest data.</p>
               </div>
             </div>
