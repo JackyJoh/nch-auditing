@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from './Layout';
-import './index.css';
+import Layout from '../Layout';
+import '../index.css';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
