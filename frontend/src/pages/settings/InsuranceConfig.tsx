@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "../../Layout";
 
 interface ConfigField {
@@ -7,12 +7,15 @@ interface ConfigField {
 }
 
 interface InsuranceConfigData {
-    id: string;
+    _id: string;
     name: string;
     fields: Record<string, string>;
+    created_at?: string;
 }
 
 const InsuranceConfig: React.FC = () => {
+    const API_BASE_URL = "http://localhost:5000";
+    
     const fieldLabels = [
         "First Name", "Last Name", "Member ID", "Care Gap", "DOB",
         "Doctor/Provider", "Insurance", "Insurance Provided", "Full Name", "Notes"
@@ -23,69 +26,164 @@ const InsuranceConfig: React.FC = () => {
         Object.fromEntries(fieldLabels.map(label => [label, ""]))
     );
     const [configs, setConfigs] = useState<InsuranceConfigData[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+
+    // Fetch configs on component mount
+    useEffect(() => {
+        fetchConfigs();
+    }, []);
+
+    // Fetch all configurations from backend
+    const fetchConfigs = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/insurance-configs`);
+            if (response.ok) {
+                const data = await response.json();
+                setConfigs(data);
+            } else {
+                alert("Failed to fetch configurations");
+            }
+        } catch (error) {
+            console.error("Error fetching configs:", error);
+            alert("Error connecting to server");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Handle input changes for field mappings
     const handleFieldChange = (label: string, value: string) => {
         setFieldMappings(prev => ({ ...prev, [label]: value }));
     };
 
-    // Add new configuration
-    const handleAdd = () => {
+    // Add or Update configuration
+    const handleAdd = async () => {
         if (!configName.trim()) {
             alert("Please enter a configuration name");
             return;
         }
-        const newConfig: InsuranceConfigData = {
-            id: Date.now().toString(),
+
+        const configData = {
             name: configName,
             fields: { ...fieldMappings }
         };
-        setConfigs(prev => [...prev, newConfig]);
-        setConfigName("");
-        setFieldMappings(Object.fromEntries(fieldLabels.map(label => [label, ""])));
+
+        setLoading(true);
+        try {
+            let response;
+            
+            if (editingId) {
+                // Update existing config
+                response = await fetch(`${API_BASE_URL}/api/insurance-configs/${editingId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(configData),
+                });
+            } else {
+                // Create new config
+                response = await fetch(`${API_BASE_URL}/api/insurance-configs`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(configData),
+                });
+            }
+
+            if (response.ok) {
+                await fetchConfigs(); // Refresh the list
+                setConfigName("");
+                setFieldMappings(Object.fromEntries(fieldLabels.map(label => [label, ""])));
+                setEditingId(null);
+            } else {
+                const error = await response.json();
+                alert(`Failed to ${editingId ? 'update' : 'add'} configuration: ${error.message}`);
+            }
+        } catch (error) {
+            console.error("Error saving config:", error);
+            alert("Error connecting to server");
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Delete configuration
-    const handleDelete = (id: string) => {
-        setConfigs(prev => prev.filter(config => config.id !== id));
+    const handleDelete = async (id: string) => {
+        if (!window.confirm("Are you sure you want to delete this configuration?")) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/insurance-configs/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                await fetchConfigs(); // Refresh the list
+            } else {
+                const error = await response.json();
+                alert(`Failed to delete configuration: ${error.message}`);
+            }
+        } catch (error) {
+            console.error("Error deleting config:", error);
+            alert("Error connecting to server");
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Edit configuration
     const handleEdit = (config: InsuranceConfigData) => {
         setConfigName(config.name);
         setFieldMappings(config.fields);
-        handleDelete(config.id);
+        setEditingId(config._id);
+        // Scroll to top to see the form
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Cancel editing
+    const handleCancel = () => {
+        setConfigName("");
+        setFieldMappings(Object.fromEntries(fieldLabels.map(label => [label, ""])));
+        setEditingId(null);
     };
 
     return (
         <Layout>
-            <div className="p-4 h-full flex flex-col gap-4">
+            <div className="p-4 h-full flex flex-col gap-3">
                 {/* Header */}
-                <div>
-                    <h1 className="text-white text-4xl font-bold mb-2">Insurance Configuration</h1>
-                    <p className="text-white/60 text-lg">Configure insurance mappings and column settings.</p>
+                <div className="mb-2">
+                    <h1 className="text-white text-3xl font-bold mb-1">Insurance Configuration</h1>
+                    <p className="text-white/60 text-sm">Configure insurance mappings and column settings.</p>
                 </div>
 
                 {/* Add Configuration Form */}
-                <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-6">
-                    <h2 className="text-white text-2xl font-bold mb-4">Add New Configuration</h2>
+                <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4">
+                    <h2 className="text-white text-xl font-bold mb-3">
+                        {editingId ? "Edit Configuration" : "Add New Configuration"}
+                    </h2>
                     
                     {/* Configuration Name */}
-                    <div className="mb-4">
-                        <label className="text-white/80 text-sm mb-2 block">Configuration Name (e.g., Ambetter, Cigna)</label>
+                    <div className="mb-3">
+                        <label className="text-white/80 text-xs mb-1 block">Configuration Name (e.g., Ambetter, Cigna)</label>
                         <input
                             type="text"
                             value={configName}
                             onChange={(e) => setConfigName(e.target.value)}
-                            className="w-full bg-slate-800/80 border border-slate-600/50 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-slate-500"
+                            className="w-full bg-slate-800/80 border border-slate-600/50 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-slate-500"
                             placeholder="Enter configuration name"
                         />
                     </div>
 
                     {/* Field Mappings - Horizontal Layout */}
-                    <div className="mb-4">
-                        <label className="text-white/80 text-sm mb-3 block">Column Mappings</label>
-                        <div className="grid grid-cols-5 gap-3">
+                    <div className="mb-3">
+                        <label className="text-white/80 text-xs mb-2 block">Column Mappings</label>
+                        <div className="grid grid-cols-5 gap-2">
                             {fieldLabels.map((label) => (
                                 <div key={label} className="flex flex-col">
                                     <span className="text-white/60 text-xs mb-1">{label}</span>
@@ -93,7 +191,7 @@ const InsuranceConfig: React.FC = () => {
                                         type="text"
                                         value={fieldMappings[label]}
                                         onChange={(e) => handleFieldChange(label, e.target.value)}
-                                        className="bg-slate-800/80 border border-slate-600/50 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-slate-500"
+                                        className="bg-slate-800/80 border border-slate-600/50 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-slate-500"
                                         placeholder="Column name"
                                     />
                                 </div>
@@ -101,27 +199,43 @@ const InsuranceConfig: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Add Button */}
-                    <button
-                        onClick={handleAdd}
-                        className="bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-200 shadow-lg"
-                    >
-                        Add Configuration
-                    </button>
+                    {/* Add/Update Button */}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleAdd}
+                            disabled={loading}
+                            className="bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-semibold px-4 py-1.5 text-sm rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? "Processing..." : editingId ? "Update Configuration" : "Add Configuration"}
+                        </button>
+                        {editingId && (
+                            <button
+                                onClick={handleCancel}
+                                disabled={loading}
+                                className="bg-slate-600/70 hover:bg-slate-500/70 border border-slate-500/50 text-white font-semibold px-4 py-1.5 text-sm rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Cancel
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Existing Configurations List */}
-                <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-6 overflow-hidden flex flex-col">
-                    <h2 className="text-white text-2xl font-bold mb-4">Existing Configurations</h2>
+                <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 overflow-hidden flex flex-col">
+                    <h2 className="text-white text-xl font-bold mb-3">Existing Configurations</h2>
                     <div className="flex-1 overflow-y-auto space-y-3">
-                        {configs.length === 0 ? (
+                        {loading ? (
+                            <div className="text-white/50 text-center py-12">
+                                <p>Loading...</p>
+                            </div>
+                        ) : configs.length === 0 ? (
                             <div className="text-white/50 text-center py-12">
                                 <p>No configurations added yet</p>
                             </div>
                         ) : (
                             configs.map((config) => (
                                 <div
-                                    key={config.id}
+                                    key={config._id}
                                     className="bg-slate-800/60 border border-slate-600/50 rounded-lg p-4 flex items-center justify-between hover:bg-slate-800/80 transition-all duration-200"
                                 >
                                     <div className="flex-1">
@@ -137,13 +251,15 @@ const InsuranceConfig: React.FC = () => {
                                     <div className="flex gap-2 ml-4">
                                         <button
                                             onClick={() => handleEdit(config)}
-                                            className="bg-blue-600/70 hover:bg-blue-500/70 border border-blue-500/50 text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm font-semibold"
+                                            disabled={loading}
+                                            className="bg-blue-600/70 hover:bg-blue-500/70 border border-blue-500/50 text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm font-semibold disabled:opacity-50"
                                         >
                                             Edit
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(config.id)}
-                                            className="bg-slate-700/80 hover:bg-red-600/70 border border-slate-500/50 hover:border-red-500/50 text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm font-semibold"
+                                            onClick={() => handleDelete(config._id)}
+                                            disabled={loading}
+                                            className="bg-slate-700/80 hover:bg-red-600/70 border border-slate-500/50 hover:border-red-500/50 text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm font-semibold disabled:opacity-50"
                                         >
                                             Delete
                                         </button>
