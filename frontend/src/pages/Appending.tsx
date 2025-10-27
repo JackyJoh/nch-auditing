@@ -71,11 +71,61 @@ const Appending: React.FC = () => {
         );
     };
 
-    const handleAppend = () => {
-        // TODO: Implement appending logic
-        console.log("Master File:", masterFile);
-        console.log("File Uploads:", fileUploads);
-        alert("Appending functionality coming soon!");
+    const handleAppend = async () => {
+        if (!masterFile || fileUploads.length === 0 || fileUploads.some(u => !u.file)) {
+            alert("Please upload all required files");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // Create FormData to send files
+            const formData = new FormData();
+            
+            // Add master file
+            formData.append('masterFile', masterFile);
+            
+            // Add care gap sheets with their config IDs
+            fileUploads.forEach((upload, index) => {
+                if (upload.file) {
+                    formData.append(`careSheet_${index}`, upload.file);
+                    formData.append(`configId_${index}`, upload.configId);
+                }
+            });
+            
+            // Send to backend
+            const response = await fetch(`${API_BASE_URL}/api/append-care-gaps`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (response.ok) {
+                // Get the file blob
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'merged_care_gaps.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                alert("Files merged successfully! Check your downloads.");
+            } else {
+                const error = await response.json();
+                alert(`Failed to merge files: ${error.message}`);
+            }
+        } catch (error) {
+            console.error("Error merging files:", error);
+            alert("Error connecting to server");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -85,7 +135,7 @@ const Appending: React.FC = () => {
                 {/* Master File Upload - Priority Section */}
                 <div className="bg-slate-700/60 backdrop-blur-sm border-2 border-indigo-500/50 rounded-xl shadow-lg p-4">
                     <h2 className="text-white text-lg font-bold mb-2">Master File (Required)</h2>
-                    <p className="text-white/70 text-xs mb-3">Upload the master gap sheet that all care gap sheets will be appended to.</p>
+                    <p className="text-white/70 text-xs mb-3">Upload the master care gap sheet that all care gap sheets will be appended to.</p>
                     
                     <div className="flex items-center gap-4">
                         <label className="flex-1 cursor-pointer">
@@ -96,7 +146,7 @@ const Appending: React.FC = () => {
                             }`}>
                                 <input
                                     type="file"
-                                    accept=".xlsx,.xls"
+                                    accept=".xlsx,.xls,.csv"
                                     onChange={(e) => setMasterFile(e.target.files?.[0] || null)}
                                     className="hidden"
                                 />
@@ -108,7 +158,7 @@ const Appending: React.FC = () => {
                                 ) : (
                                     <div>
                                         <p className="text-white/80 font-semibold text-sm">Click to upload master file</p>
-                                        <p className="text-white/60 text-xs mt-1">Excel files only (.xlsx, .xls)</p>
+                                        <p className="text-white/60 text-xs mt-1">Excel or CSV files (.xlsx, .xls, .csv)</p>
                                     </div>
                                 )}
                             </div>
@@ -172,7 +222,7 @@ const Appending: React.FC = () => {
                                             }`}>
                                                 <input
                                                     type="file"
-                                                    accept=".xlsx,.xls"
+                                                    accept=".xlsx,.xls,.csv"
                                                     onChange={(e) => handleFileChange(upload.configId, e.target.files?.[0] || null)}
                                                     className="hidden"
                                                 />
@@ -184,7 +234,7 @@ const Appending: React.FC = () => {
                                                 ) : (
                                                     <div>
                                                         <p className="text-white/80 text-sm">Click to upload file</p>
-                                                        <p className="text-white/60 text-xs mt-1">Excel files only (.xlsx, .xls)</p>
+                                                        <p className="text-white/60 text-xs mt-1">Excel or CSV files</p>
                                                     </div>
                                                 )}
                                             </div>

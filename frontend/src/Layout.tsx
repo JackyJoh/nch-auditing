@@ -1,11 +1,13 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const location = useLocation();
+
   return (
     <div className="flex h-screen w-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
       {/* Sidebar */}
@@ -14,16 +16,32 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <h1 className="text-white text-2xl font-bold">NCH Auditing</h1>
         </div>
         <nav className="flex flex-col gap-2">
-          <Link to="/" className="text-left text-white/80 hover:text-white hover:bg-white/10 px-4 py-3 rounded-lg transition-all duration-200">
+          <Link to="/" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+            location.pathname === '/' 
+              ? 'bg-slate-700/80 text-white border border-slate-500/50' 
+              : 'text-white/80 hover:text-white hover:bg-white/10'
+          }`}>
             Home
           </Link>
-          <Link to="/sorting" className="text-left text-white/80 hover:text-white hover:bg-white/10 px-4 py-3 rounded-lg transition-all duration-200">
+          <Link to="/sorting" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+            location.pathname === '/sorting' 
+              ? 'bg-slate-700/80 text-white border border-slate-500/50' 
+              : 'text-white/80 hover:text-white hover:bg-white/10'
+          }`}>
             Sort PDFs
           </Link>
-          <Link to="/appending" className="text-left text-white/80 hover:text-white hover:bg-white/10 px-4 py-3 rounded-lg transition-all duration-200">
+          <Link to="/appending" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+            location.pathname === '/appending' 
+              ? 'bg-slate-700/80 text-white border border-slate-500/50' 
+              : 'text-white/80 hover:text-white hover:bg-white/10'
+          }`}>
             Master Sheet
           </Link>
-          <Link to="/settings" className="text-left text-white/80 hover:text-white hover:bg-white/10 px-4 py-3 rounded-lg transition-all duration-200">
+          <Link to="/settings" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+            location.pathname.startsWith('/settings')
+              ? 'bg-slate-700/80 text-white border border-slate-500/50' 
+              : 'text-white/80 hover:text-white hover:bg-white/10'
+          }`}>
             Settings
           </Link>
         </nav>
