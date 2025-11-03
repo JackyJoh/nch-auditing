@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
-    const API_BASE_URL = "http://localhost:5000";
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
     const [gapsFile, setGapsFile] = useState<File | null>(null);
     const [gapsFileInfo, setGapsFileInfo] = useState<any>(null);
     const [loading, setLoading] = useState(false);

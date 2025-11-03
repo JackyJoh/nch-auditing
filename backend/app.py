@@ -11,7 +11,8 @@ from merging import merge_care_gap_sheets
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app) 
+
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Establish MongoDB connection
 mongo_uri = os.getenv("MONGO_URI")
