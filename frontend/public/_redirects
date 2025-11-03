@@ -1,1 +1,5 @@
-/*    /index.html   200
+# Redirect all non-file requests to index.html (for React routing)
+/* /index.html 200
+
+# Proxy API calls to your Render backend (The crucial line!)
+/api/* https://nch-auditing.onrender.com/:splat 200
