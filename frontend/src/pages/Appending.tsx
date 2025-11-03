@@ -14,7 +14,7 @@ interface FileUpload {
 }
 
 const Appending: React.FC = () => {
-    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000";
     
     const [configs, setConfigs] = useState<InsuranceConfig[]>([]);
     const [selectedConfigs, setSelectedConfigs] = useState<string[]>([]);
@@ -25,6 +25,7 @@ const Appending: React.FC = () => {
     // Fetch insurance configs on mount
     useEffect(() => {
         fetchConfigs();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Update file uploads when selected configs change
@@ -39,6 +40,7 @@ const Appending: React.FC = () => {
             };
         });
         setFileUploads(newUploads);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedConfigs, configs]);
 
     const fetchConfigs = async () => {

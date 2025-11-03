@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Layout from "../../Layout";
 
-interface ConfigField {
-    label: string;
-    value: string;
-}
-
 interface InsuranceConfigData {
     _id: string;
     name: string;
@@ -32,6 +27,7 @@ const InsuranceConfig: React.FC = () => {
     // Fetch configs on component mount
     useEffect(() => {
         fetchConfigs();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Fetch all configurations from backend

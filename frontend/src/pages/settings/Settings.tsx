@@ -11,6 +11,7 @@ const Settings: React.FC = () => {
 
     useEffect(() => {
         fetchGapsFileInfo();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchGapsFileInfo = async () => {
