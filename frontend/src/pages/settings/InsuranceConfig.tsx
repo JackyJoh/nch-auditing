@@ -14,7 +14,7 @@ interface InsuranceConfigData {
 }
 
 const InsuranceConfig: React.FC = () => {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
     
     const fieldLabels = [
         "First Name", "Last Name", "Member ID", "Care Gap", "DOB",
