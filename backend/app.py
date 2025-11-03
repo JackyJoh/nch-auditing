@@ -310,5 +310,34 @@ def sort_pdfs_route():  # Changed function name to avoid conflict
         traceback.print_exc()  # Print full stack trace
         return jsonify({"message": "Sorting failed.", "error": str(e)}), 500
 
+# Route for login
+@app.route('/api/login', methods=['POST'])
+def login():
+    try:
+        data = request.json
+        password = data.get('password')
+        
+        if not password:
+            return jsonify({"message": "Password is required."}), 400
+        
+        # Get password from environment variable
+        correct_password = os.getenv("APP_PASSWORD")
+        
+        if not correct_password:
+            return jsonify({"message": "Server configuration error."}), 500
+        
+        if password == correct_password:
+            # In a real app, you'd generate a JWT token here
+            return jsonify({
+                "message": "Login successful",
+                "token": "authenticated"
+            }), 200
+        else:
+            return jsonify({"message": "Incorrect password"}), 401
+            
+    except Exception as e:
+        print(f"Error in login: {e}")
+        return jsonify({"message": "Login failed.", "error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)

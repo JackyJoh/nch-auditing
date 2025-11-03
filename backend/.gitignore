@@ -13,6 +13,17 @@ ENV/
 .env
 .env.local
 
+# Excel/CSV files (may contain sensitive data)
+*.xlsx
+*.xls
+*.csv
+
+# PDF files (may contain PHI/PII)
+*.pdf
+
+# ZIP files (sorted PDFs output)
+*.zip
+
 # IDE
 .vscode/
 .idea/
