@@ -21,6 +21,7 @@ const Appending: React.FC = () => {
     const [fileUploads, setFileUploads] = useState<FileUpload[]>([]);
     const [masterFile, setMasterFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
+    const [enableToBeRemoved, setEnableToBeRemoved] = useState(false);
 
     // Fetch insurance configs on mount
     useEffect(() => {
@@ -86,6 +87,8 @@ const Appending: React.FC = () => {
             
             // Add master file
             formData.append('masterFile', masterFile);
+
+            formData.append('enableToBeRemoved', enableToBeRemoved ? 'true' : 'false');
             
             // Add care gap sheets with their config IDs
             fileUploads.forEach((upload, index) => {
@@ -163,6 +166,26 @@ const Appending: React.FC = () => {
                                         <p className="text-white/60 text-xs mt-1">Excel or CSV files (.xlsx, .xls, .csv)</p>
                                     </div>
                                 )}
+                            </div>
+                        </label>
+                    </div>
+
+                    {/* Enable to be removed toggle */}
+                    <div className="mt-4 pt-4 border-t border-slate-600/50">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className="relative">
+                                <input
+                                    type="checkbox"
+                                    checked={enableToBeRemoved}
+                                    onChange={(e) => setEnableToBeRemoved(e.target.checked)}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-slate-600/60 rounded-full peer-checked:bg-indigo-600/80 transition-all duration-200 border border-slate-500/50 peer-checked:border-indigo-400/50"></div>
+                                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all duration-200 peer-checked:translate-x-5"></div>
+                            </div>
+                            <div>
+                                <p className="text-white font-semibold text-sm group-hover:text-indigo-300 transition-colors">Enable to be removed?</p>
+                                <p className="text-white/60 text-xs">Process items marked for removal</p>
                             </div>
                         </label>
                     </div>
