@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import List, Dict, Tuple
 
-def merge_care_gap_sheets(master_file, care_gap_files_with_configs: List[Tuple], db):
+def merge_care_gap_sheets(master_file, care_gap_files_with_configs: List[Tuple], db, enable_to_be_removed: bool) -> bytes:
     """
     Merge multiple care gap sheets into the master sheet.
     
@@ -9,6 +9,7 @@ def merge_care_gap_sheets(master_file, care_gap_files_with_configs: List[Tuple],
         master_file: The master Excel file (file object or path)
         care_gap_files_with_configs: List of tuples [(file, config_id), (file, config_id), ...]
         db: MongoDB database connection to fetch configs
+        enable_to_be_removed: Boolean flag to enable "to be removed" logic
     
     Returns:
         bytes: The merged Excel file as bytes for download
@@ -30,6 +31,12 @@ def merge_care_gap_sheets(master_file, care_gap_files_with_configs: List[Tuple],
     else:
         master = pd.read_excel(BytesIO(master_file.read()))
     master_file.seek(0)  # Reset file pointer
+    
+    # Handle "To be removed" logic if enabled
+    if enable_to_be_removed and 'To be removed' in master.columns:
+        mask = master["To be removed"].astype(str).str.contains("y", case=False, na=False)
+        master = master.loc[~mask].copy()
+        master = master.drop(columns=['To be removed'])
     
     cols = ["First Name", "Last Name", "Member ID", "Care Gap", "DOB", "Insurance", "Doctor/Provider", "Notes"]
     
@@ -176,10 +183,13 @@ def merge_care_gap_sheets(master_file, care_gap_files_with_configs: List[Tuple],
     # Append new data to master, keeping master's existing rows
     masterFrame = pd.concat([masterFrame, newDataFrame], ignore_index=True)
     
-    # Final deduplication - remove any from new data that already exist in master
-    # Keep 'first' which preserves master file rows
+    # Use disjoint deduplication - DOB and Member ID
     masterFrame = masterFrame.drop_duplicates(subset=['Care Gap', 'First Name', 'Member ID', 'Last Name'], keep='first')
     masterFrame = masterFrame.drop_duplicates(subset=['Care Gap', 'First Name', 'DOB', 'Last Name'], keep='first')
+
+    # Add "To be removed" column back
+    if enable_to_be_removed:
+        masterFrame['To be removed'] = ""
 
     print(f"Final merged data: {len(masterFrame)} rows (added {len(masterFrame) - len(master) if len(master) > 0 else len(masterFrame)} new rows)")
 

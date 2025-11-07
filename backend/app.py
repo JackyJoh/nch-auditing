@@ -214,6 +214,10 @@ def append_care_gaps():
         
         print(f"Gaps file found in DB with {len(gaps_doc.get('data', []))} rows")  # Debug
         
+        # Get the enableToBeRemoved boolean
+        enable_to_be_removed = request.form.get('enableToBeRemoved', 'false').lower() == 'true'
+        print(f"Enable to be removed: {enable_to_be_removed} (type: {type(enable_to_be_removed)})")  # Debug
+        
         # Get care gap files and their config IDs
         care_gap_files_with_configs = []
         
@@ -243,7 +247,8 @@ def append_care_gaps():
         merged_file_bytes = merge_care_gap_sheets(
             master_file,
             care_gap_files_with_configs,
-            db
+            db,
+            enable_to_be_removed
         )
         
         print(f"Merge complete, file size: {len(merged_file_bytes) if merged_file_bytes else 0} bytes")  # Debug
