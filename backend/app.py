@@ -12,7 +12,16 @@ load_dotenv()
 
 app = Flask(__name__)
 
-CORS(app, resources={r"/*": {"origins": "*"}})
+# Fix CORS - allow specific origins and all methods
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["https://nch-auditing.netlify.app", "http://localhost:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Disposition"],
+        "supports_credentials": True
+    }
+})
 
 # Establish MongoDB connection
 mongo_uri = os.getenv("MONGO_URI")

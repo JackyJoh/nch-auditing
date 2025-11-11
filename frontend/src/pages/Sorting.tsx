@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Layout from '../Layout';
 
 const Sorting: React.FC = () => {
+    const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || "http://localhost:5000").replace(/\/+$/, ''); // Remove trailing slashes
+    
     const [masterFile, setMasterFile] = useState<File | null>(null);
     const [pdfFiles, setPdfFiles] = useState<FileList | null>(null);
     const [loading, setLoading] = useState(false);
@@ -13,26 +15,20 @@ const Sorting: React.FC = () => {
     };
 
     const handleSort = async () => {
-        if (!masterFile || !pdfFiles || pdfFiles.length === 0) {
+        if (!masterFile || pdfFiles.length === 0) {
             alert("Please upload all required files");
             return;
         }
 
         setLoading(true);
         try {
-            // Create FormData to send files
             const formData = new FormData();
-            
-            // Add master file
             formData.append('masterFile', masterFile);
             
-            // Add all PDF files
-            Array.from(pdfFiles).forEach((file) => {
+            pdfFiles.forEach((file) => {
                 formData.append('pdfFiles', file);
             });
             
-            // Send to backend
-            const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
             const response = await fetch(`${API_BASE_URL}/api/sort-pdfs`, {
                 method: 'POST',
                 body: formData,
