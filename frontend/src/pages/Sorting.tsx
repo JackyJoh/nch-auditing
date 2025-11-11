@@ -25,7 +25,8 @@ const Sorting: React.FC = () => {
             const formData = new FormData();
             formData.append('masterFile', masterFile);
             
-            pdfFiles.forEach((file) => {
+            // Convert FileList to Array before using forEach
+            Array.from(pdfFiles).forEach((file) => {
                 formData.append('pdfFiles', file);
             });
             
