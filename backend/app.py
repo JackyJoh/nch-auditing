@@ -7,19 +7,14 @@ from pymongo import MongoClient
 from bson import ObjectId
 from sorting import sort_pdfs
 from merging import merge_care_gap_sheets
+from functools import wraps
 
 load_dotenv()
 
 app = Flask(__name__)
 
-# Configure CORS properly for production
-CORS(app, 
-     origins=["https://nch-auditing.netlify.app", "http://localhost:3000"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization"],
-     expose_headers=["Content-Disposition"],
-     supports_credentials=True,
-     max_age=3600)
+# Allow all origins - no CORS restrictions
+CORS(app)
 
 # Establish MongoDB connection
 mongo_uri = os.getenv("MONGO_URI")
@@ -40,8 +35,19 @@ if mongo_uri:
 else:
     print("MONGO_URI not found in environment variables.")
 
+# Simple auth decorator
+def require_auth(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_token = request.headers.get('Authorization')
+        if not auth_token or auth_token != 'Bearer authenticated':
+            return jsonify({"message": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
 # Route for adding insurance configurations
 @app.route('/api/insurance-configs', methods=['POST'])
+@require_auth
 def submit_json_to_mongo():
     
     if db is None:
@@ -73,6 +79,7 @@ def submit_json_to_mongo():
 
 # Route for retrieving insurance configurations
 @app.route('/api/insurance-configs', methods=['GET'])
+@require_auth
 def get_insurance_configs():
     if db is None:
         return jsonify({"message": "Database connection is down."}), 503
@@ -89,6 +96,7 @@ def get_insurance_configs():
     
 # Route for editing insurance configurations
 @app.route('/api/insurance-configs/<config_id>', methods=['PUT'])
+@require_auth
 def edit_insurance_config(config_id):
     if db is None:
         return jsonify({"message": "Database connection is down."}), 503
@@ -114,6 +122,7 @@ def edit_insurance_config(config_id):
     
 # Route for deleting insurance configurations
 @app.route('/api/insurance-configs/<config_id>', methods=['DELETE'])
+@require_auth
 def delete_insurance_config(config_id):
     if db is None:
         return jsonify({"message": "Database connection is down."}), 503
@@ -132,6 +141,7 @@ def delete_insurance_config(config_id):
 
 # Route for uploading gaps file (one-time setup)
 @app.route('/api/gaps-file', methods=['POST'])
+@require_auth
 def upload_gaps_file():
     if db is None:
         return jsonify({"message": "Database connection is down."}), 503
@@ -180,6 +190,7 @@ def upload_gaps_file():
 
 # Route for retrieving gaps file info
 @app.route('/api/gaps-file', methods=['GET'])
+@require_auth
 def get_gaps_file_info():
     if db is None:
         return jsonify({"message": "Database connection is down."}), 503
@@ -202,6 +213,7 @@ def get_gaps_file_info():
 
 # Route for appending/merging care gap sheets
 @app.route('/api/append-care-gaps', methods=['POST'])
+@require_auth
 def append_care_gaps():
     if db is None:
         return jsonify({"message": "Database connection is down."}), 503
@@ -280,6 +292,7 @@ def append_care_gaps():
     
 # Route for sorting PDFs
 @app.route('/api/sort-pdfs', methods=['POST'])
+@require_auth
 def sort_pdfs_route():  # Changed function name to avoid conflict
     try:
         # Get the uploaded master file
@@ -323,7 +336,7 @@ def sort_pdfs_route():  # Changed function name to avoid conflict
         traceback.print_exc()  # Print full stack trace
         return jsonify({"message": "Sorting failed.", "error": str(e)}), 500
 
-# Route for login
+# Route for login (NO AUTH REQUIRED)
 @app.route('/api/login', methods=['POST'])
 def login():
     try:
@@ -335,10 +348,6 @@ def login():
         
         # Get password from environment variable
         correct_password = os.getenv("APP_PASSWORD")
-        
-        if not correct_password:
-            return jsonify({"message": "Server configuration error."}), 500
-        
         if password == correct_password:
             # In a real app, you'd generate a JWT token here
             return jsonify({

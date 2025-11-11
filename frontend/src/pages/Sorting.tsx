@@ -32,6 +32,9 @@ const Sorting: React.FC = () => {
             
             const response = await fetch(`${API_BASE_URL}/api/sort-pdfs`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || 'authenticated'}`,
+                },
                 body: formData,
             });
 

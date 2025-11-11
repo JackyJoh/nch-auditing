@@ -46,7 +46,11 @@ const Appending: React.FC = () => {
 
     const fetchConfigs = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/insurance-configs`);
+            const response = await fetch(`${API_BASE_URL}/api/insurance-configs`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || 'authenticated'}`,
+                },
+            });
             if (response.ok) {
                 const data = await response.json();
                 setConfigs(data);
@@ -101,6 +105,9 @@ const Appending: React.FC = () => {
             // Send to backend
             const response = await fetch(`${API_BASE_URL}/api/append-care-gaps`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || 'authenticated'}`,
+                },
                 body: formData,
             });
 
