@@ -293,30 +293,34 @@ def append_care_gaps():
 # Route for sorting PDFs
 @app.route('/api/sort-pdfs', methods=['POST'])
 @require_auth
-def sort_pdfs_route():  # Changed function name to avoid conflict
+def sort_pdfs_route():
     try:
         # Get the uploaded master file
         master_file = request.files.get('masterFile')
         if not master_file:
             return jsonify({"message": "Master file is required."}), 400
         
-        print(f"Master file received: {master_file.filename}")  # Debug
+        print(f"Master file received: {master_file.filename}")
         
         # Get the uploaded PDF files
         pdf_files = request.files.getlist('pdfFiles')
         if not pdf_files or len(pdf_files) == 0:
             return jsonify({"message": "At least one PDF file is required."}), 400
         
-        print(f"Total PDF files received: {len(pdf_files)}")  # Debug
+        print(f"Total PDF files received: {len(pdf_files)}")
+        
+        # Limit to prevent memory issues
+        if len(pdf_files) > 200:
+            return jsonify({"message": "Maximum 200 PDF files allowed at once. Please split into smaller batches."}), 400
         
         # Call the sorting function
-        print("Calling sort_pdfs...")  # Debug
+        print("Calling sort_pdfs...")
         sorted_zip_bytes = sort_pdfs(
             master_file,
             pdf_files
         )
         
-        print(f"Sorting complete, ZIP size: {len(sorted_zip_bytes) if sorted_zip_bytes else 0} bytes")  # Debug
+        print(f"Sorting complete, ZIP size: {len(sorted_zip_bytes) if sorted_zip_bytes else 0} bytes")
         
         if not sorted_zip_bytes:
             return jsonify({"message": "Sorting returned empty ZIP."}), 500
@@ -333,7 +337,7 @@ def sort_pdfs_route():  # Changed function name to avoid conflict
     except Exception as e:
         print(f"Error in sort_pdfs_route: {e}")
         import traceback
-        traceback.print_exc()  # Print full stack trace
+        traceback.print_exc()
         return jsonify({"message": "Sorting failed.", "error": str(e)}), 500
 
 # Route for login (NO AUTH REQUIRED)
@@ -360,6 +364,11 @@ def login():
     except Exception as e:
         print(f"Error in login: {e}")
         return jsonify({"message": "Login failed.", "error": str(e)}), 500
+
+# Health check endpoint (NO AUTH REQUIRED)
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({"status": "ok", "message": "Backend is running"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)

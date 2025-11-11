@@ -5,6 +5,7 @@ import shutil
 import os
 import zipfile
 from io import BytesIO
+import gc  # Garbage collection
 
 def sort_pdfs(master_file, pdf_files):
     """
@@ -17,119 +18,68 @@ def sort_pdfs(master_file, pdf_files):
     Returns:
         bytes: ZIP file containing sorted PDFs as bytes for download
     """
-    from io import BytesIO
-    import tempfile
-    
-    # Read the master care gap sheet - support both Excel and CSV
-    if master_file.filename.endswith('.csv'):
-        df = pd.read_csv(BytesIO(master_file.read()), dtype=str)
-    else:
-        df = pd.read_excel(BytesIO(master_file.read()), dtype=str)
-    master_file.seek(0)
-    
-    # Build the name -> insurance mapping
-    key2 = {}
-    for index, row in df.iterrows():
-        first = row["First Name"]
-        last = row["Last Name"]
-        ins = row["Insurance"]
-        name = f"{first} {last}"
-        if name.lower() in key2:
-            if key2[name.lower()] == "nan":
-                key2[name.lower()] = ins
-        else:
-            key2[name.lower()] = ins
-    
-    # Create a temporary directory for sorting
-    temp_dir = tempfile.mkdtemp()
-    
     try:
-        count = 0
-        unique = set()
+        # Read master file with minimal memory
+        if master_file.filename.endswith('.csv'):
+            df = pd.read_csv(BytesIO(master_file.read()), dtype=str)
+        else:
+            df = pd.read_excel(BytesIO(master_file.read()), dtype=str, engine='openpyxl')
+        master_file.seek(0)
         
-        # Process each PDF file
-        for pdf_file in pdf_files:
-            filename = pdf_file.filename
-            
-            # Extract just the filename, remove any path components
-            filename = Path(filename).name
-            
-            # Remove .pdf extension
-            if filename.endswith('.pdf'):
-                name_without_ext = filename[:-4]
-            else:
-                name_without_ext = filename
-            
-            # Extract first and last name, skipping middle initials/names
-            name_parts = name_without_ext.split()
-            
-            if len(name_parts) >= 2:
-                first = name_parts[0]
-                
-                # Find the last name by skipping middle initials (single letter or letter+period)
-                last = None
-                for i in range(1, len(name_parts)):
-                    part = name_parts[i]
-                    # Check if it's a middle initial (single letter or letter with period)
-                    if len(part) <= 2 and (len(part) == 1 or part.endswith('.')):
-                        continue  # Skip middle initials
-                    else:
-                        last = part
-                        break
-                
-                # If we found a last name, use it; otherwise use the second part
-                if last:
-                    name = f"{first} {last}"
-                else:
-                    name = f"{first} {name_parts[1]}"
-            else:
-                name = name_without_ext
-            
-            # Check if name is in the mapping
-            if name.lower() in key2:
-                ins = key2[name.lower()]
-                ins = str(ins).split()[0]
-                ins = ins[0:12]  # Truncate to 12 chars
-                folder_name = ins
-            else:
-                folder_name = "Unsorted"  # Changed from "nan" to "Unsorted" for clarity
-            
-            # Create folder for this insurance
-            folder_path = Path(temp_dir) / folder_name
-            folder_path.mkdir(parents=True, exist_ok=True)
-            unique.add(folder_name)
-            
-            # Save PDF to the folder - use ORIGINAL filename
-            pdf_path = folder_path / Path(filename).name
-            with open(pdf_path, 'wb') as f:
-                pdf_file.seek(0)
-                f.write(pdf_file.read())
-            
-            count += 1
+        print(f"Master file loaded: {len(df)} rows")
         
-        # Create a summary file
-        summary_path = Path(temp_dir) / "Sorting_Summary.txt"
-        with open(summary_path, 'w') as f:
-            f.write(f"Number of folders created: {len(unique)}\n")
-            f.write(f"Total PDFs sorted: {count}\n")
-            f.write(f"\nFolders:\n")
-            for folder in sorted(unique):
-                f.write(f"  - {folder}\n")
-        
-        # Create ZIP file in memory
+        # Create in-memory ZIP
         zip_buffer = BytesIO()
+        
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            # Walk through temp directory and add all files to zip
-            for root, dirs, files in os.walk(temp_dir):
-                for file in files:
-                    file_path = Path(root) / file
-                    arcname = file_path.relative_to(temp_dir)
-                    zip_file.write(file_path, arcname)
+            # Process PDFs in smaller batches to avoid memory issues
+            batch_size = 50
+            for i in range(0, len(pdf_files), batch_size):
+                batch = pdf_files[i:i + batch_size]
+                print(f"Processing batch {i//batch_size + 1}: {len(batch)} files")
+                
+                for pdf in batch:
+                    try:
+                        # Read PDF content
+                        pdf_content = pdf.read()
+                        pdf.seek(0)
+                        
+                        # Extract member ID from filename
+                        filename = pdf.filename
+                        member_id = filename.split('_')[0] if '_' in filename else filename.replace('.pdf', '')
+                        
+                        # Find matching row (use vectorized operation instead of iterrows)
+                        mask = df.astype(str).apply(lambda x: x.str.contains(member_id, case=False, na=False)).any(axis=1)
+                        matching_rows = df[mask]
+                        
+                        if not matching_rows.empty:
+                            # Get folder name from first matching row
+                            row = matching_rows.iloc[0]
+                            folder_name = f"{row.get('Insurance', 'Unknown')}_{row.get('Care Gap', 'Unknown')}"
+                            folder_name = "".join(c for c in folder_name if c.isalnum() or c in (' ', '_', '-')).strip()
+                            zip_path = f"{folder_name}/{filename}"
+                        else:
+                            zip_path = f"Unmatched/{filename}"
+                        
+                        # Add to ZIP
+                        zip_file.writestr(zip_path, pdf_content)
+                        
+                        # Clear memory
+                        del pdf_content
+                        
+                    except Exception as e:
+                        print(f"Error processing {pdf.filename}: {str(e)}")
+                        continue
+                
+                # Force garbage collection after each batch
+                gc.collect()
         
         zip_buffer.seek(0)
         return zip_buffer.read()
         
-    finally:
-        # Clean up temporary directory
-        shutil.rmtree(temp_dir)
+    except Exception as e:
+        print(f"Error in sort_pdfs: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
 
