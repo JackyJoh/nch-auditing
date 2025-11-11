@@ -15,7 +15,7 @@ const Sorting: React.FC = () => {
     };
 
     const handleSort = async () => {
-        if (!masterFile || pdfFiles.length === 0) {
+        if (!masterFile || !pdfFiles || pdfFiles.length === 0) {
             alert("Please upload all required files");
             return;
         }
