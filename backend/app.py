@@ -13,8 +13,12 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Allow all origins - no CORS restrictions
-CORS(app)
+# Configure CORS to allow credentials
+CORS(app, 
+     supports_credentials=True,
+     origins=["http://localhost:3000", "https://nch-auditing.onrender.com", os.getenv("FRONTEND_URL", "http://localhost:3000")],
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Establish MongoDB connection
 mongo_uri = os.getenv("MONGO_URI")
@@ -39,9 +43,19 @@ else:
 def require_auth(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        auth_token = request.headers.get('Authorization')
-        if not auth_token or auth_token != 'Bearer authenticated':
+        # Be tolerant of different token locations and formats
+        auth_header = request.headers.get('Authorization', '') or ''
+        token = None
+        if auth_header.lower().startswith('bearer '):
+            token = auth_header.split(' ', 1)[1].strip()
+        elif auth_header:
+            token = auth_header.strip()
+        # Fallbacks: cookie or query param
+        token = token or request.cookies.get('authToken') or request.args.get('token')
+
+        if token != 'authenticated':
             return jsonify({"message": "Unauthorized"}), 401
+
         return f(*args, **kwargs)
     return decorated_function
 
@@ -344,23 +358,35 @@ def sort_pdfs_route():
 @app.route('/api/login', methods=['POST'])
 def login():
     try:
-        data = request.json
+        data = request.json or {}
         password = data.get('password')
-        
+
         if not password:
             return jsonify({"message": "Password is required."}), 400
-        
-        # Get password from environment variable
+
         correct_password = os.getenv("APP_PASSWORD")
         if password == correct_password:
-            # In a real app, you'd generate a JWT token here
-            return jsonify({
+            token = "authenticated"
+            resp = jsonify({
                 "message": "Login successful",
-                "token": "authenticated"
-            }), 200
+                "token": token
+            })
+            # For localhost dev: secure=False, samesite='Lax'
+            # Set COOKIE_SECURE=true in env if serving over HTTPS to switch to SameSite=None; Secure
+            secure = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+            resp.set_cookie(
+                "authToken",
+                token,
+                httponly=True,
+                secure=secure,
+                samesite='None' if secure else 'Lax',
+                max_age=60 * 60 * 24 * 7,
+                path='/'
+            )
+            return resp, 200
         else:
             return jsonify({"message": "Incorrect password"}), 401
-            
+
     except Exception as e:
         print(f"Error in login: {e}")
         return jsonify({"message": "Login failed.", "error": str(e)}), 500

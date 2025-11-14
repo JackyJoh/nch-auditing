@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Layout from "../../Layout";
+import { useNavigate } from 'react-router-dom';
 
 interface InsuranceConfigData {
     _id: string;
@@ -10,7 +11,8 @@ interface InsuranceConfigData {
 
 const InsuranceConfig: React.FC = () => {
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
-    
+    const navigate = useNavigate();
+
     const fieldLabels = [
         "First Name", "Last Name", "Member ID", "Care Gap", "DOB",
         "Doctor/Provider", "Insurance", "Insurance Provided", "Full Name", "Notes"
@@ -24,6 +26,35 @@ const InsuranceConfig: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
+    // Auth helpers (mirror Settings.tsx)
+    const getAuthToken = () => {
+        const storageToken =
+            localStorage.getItem('authToken') ||
+            sessionStorage.getItem('authToken');
+        if (storageToken) return storageToken;
+        const match = document.cookie.match(/(?:^|;\s*)authToken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : null;
+    };
+
+    const authorizedFetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
+        const token = getAuthToken() || 'authenticated';
+        const headers = new Headers(init.headers || {});
+        headers.set('Authorization', `Bearer ${token}`);
+        if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+
+        const response = await fetch(input, {
+            ...init,
+            headers,
+            credentials: init.credentials ?? 'include',
+        });
+
+        if (response.status === 401) {
+            navigate('/login');
+            throw new Error('Unauthorized');
+        }
+        return response;
+    };
+
     // Fetch configs on component mount
     useEffect(() => {
         fetchConfigs();
@@ -34,7 +65,9 @@ const InsuranceConfig: React.FC = () => {
     const fetchConfigs = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/insurance-configs`);
+            const response = await authorizedFetch(`${API_BASE_URL}/api/insurance-configs`, {
+                credentials: 'include'
+            });
             if (response.ok) {
                 const data = await response.json();
                 setConfigs(data);
@@ -69,10 +102,10 @@ const InsuranceConfig: React.FC = () => {
         setLoading(true);
         try {
             let response;
-            
+
             if (editingId) {
                 // Update existing config
-                response = await fetch(`${API_BASE_URL}/api/insurance-configs/${editingId}`, {
+                response = await authorizedFetch(`${API_BASE_URL}/api/insurance-configs/${editingId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -81,7 +114,7 @@ const InsuranceConfig: React.FC = () => {
                 });
             } else {
                 // Create new config
-                response = await fetch(`${API_BASE_URL}/api/insurance-configs`, {
+                response = await authorizedFetch(`${API_BASE_URL}/api/insurance-configs`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -115,7 +148,7 @@ const InsuranceConfig: React.FC = () => {
 
         setLoading(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/insurance-configs/${id}`, {
+            const response = await authorizedFetch(`${API_BASE_URL}/api/insurance-configs/${id}`, {
                 method: 'DELETE',
             });
 

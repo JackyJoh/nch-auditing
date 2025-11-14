@@ -9,6 +9,35 @@ const Settings: React.FC = () => {
     const [gapsFileInfo, setGapsFileInfo] = useState<any>(null);
     const [loading, setLoading] = useState(false);
 
+    // Inject Authorization header and handle 401s
+    const getAuthToken = () => {
+        const storageToken =
+            localStorage.getItem('authToken') ||
+            sessionStorage.getItem('authToken');
+        if (storageToken) return storageToken;
+        const match = document.cookie.match(/(?:^|;\s*)authToken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : null;
+    };
+
+    const authorizedFetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
+        const token = getAuthToken() || 'authenticated';
+        const headers = new Headers(init.headers || {});
+        headers.set('Authorization', `Bearer ${token}`);
+        if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+
+        const response = await fetch(input, {
+            ...init,
+            headers,
+            credentials: init.credentials ?? 'include',
+        });
+
+        if (response.status === 401) {
+            navigate('/login');
+            throw new Error('Unauthorized');
+        }
+        return response;
+    };
+
     useEffect(() => {
         fetchGapsFileInfo();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -16,7 +45,9 @@ const Settings: React.FC = () => {
 
     const fetchGapsFileInfo = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/gaps-file`);
+            const response = await authorizedFetch(`${API_BASE_URL}/api/gaps-file`, {
+                // ...existing options if needed...
+            });
             if (response.ok) {
                 const data = await response.json();
                 setGapsFileInfo(data);
@@ -37,9 +68,10 @@ const Settings: React.FC = () => {
             const formData = new FormData();
             formData.append('gapsFile', gapsFile);
 
-            const response = await fetch(`${API_BASE_URL}/api/gaps-file`, {
+            const response = await authorizedFetch(`${API_BASE_URL}/api/gaps-file`, {
                 method: 'POST',
                 body: formData,
+                // Do not set Content-Type when sending FormData
             });
 
             if (response.ok) {
@@ -47,8 +79,8 @@ const Settings: React.FC = () => {
                 setGapsFile(null);
                 fetchGapsFileInfo();
             } else {
-                const error = await response.json();
-                alert(`Failed to upload: ${error.message}`);
+                const error = await response.json().catch(() => ({} as any));
+                alert(`Failed to upload: ${error?.message || response.statusText}`);
             }
         } catch (error) {
             console.error("Error uploading gaps file:", error);
