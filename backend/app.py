@@ -370,7 +370,7 @@ def login():
             payload = {
                 "authenticated": True,
                 "iat": int(now.timestamp()),
-                "exp": int((now + timedelta(days=7)).timestamp())
+                "exp": int((now + timedelta(hours=1)).timestamp())  # CHANGED: 1 hour instead of 7 days
             }
             token = jwt.encode(payload, secret_key, algorithm="HS256")
             
@@ -385,7 +385,7 @@ def login():
                 httponly=True,
                 secure=secure,
                 samesite='None' if secure else 'Lax',
-                max_age=60 * 60 * 24 * 7,
+                max_age=60 * 60,  # CHANGED: 1 hour instead of 7 days
                 path='/'
             )
             return resp, 200

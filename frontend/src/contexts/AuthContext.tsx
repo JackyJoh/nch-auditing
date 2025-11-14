@@ -24,8 +24,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const loginTimestamp = parseInt(loginTime);
             const hoursSinceLogin = (now - loginTimestamp) / (1000 * 60 * 60);
 
-            // Token expires after 7 days (matching backend)
-            if (hoursSinceLogin < 168) { // 7 days * 24 hours
+            // Token expires after 1 hour
+            if (hoursSinceLogin < 1) {
                 setIsAuthenticated(true);
             } else {
                 // Token expired, clear it
