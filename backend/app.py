@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 import os
 from pymongo import MongoClient
@@ -8,6 +8,7 @@ from bson import ObjectId
 from sorting import sort_pdfs
 from merging import merge_care_gap_sheets
 from functools import wraps
+import jwt
 
 load_dotenv()
 
@@ -39,22 +40,43 @@ if mongo_uri:
 else:
     print("MONGO_URI not found in environment variables.")
 
+# Get debug mode from environment
+DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() == "true"
+
 # Simple auth decorator
 def require_auth(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Be tolerant of different token locations and formats
-        auth_header = request.headers.get('Authorization', '') or ''
+        # Get token from Authorization header
+        auth_header = request.headers.get('Authorization', '')
         token = None
-        if auth_header.lower().startswith('bearer '):
+        
+        if auth_header and auth_header.startswith('Bearer '):
             token = auth_header.split(' ', 1)[1].strip()
         elif auth_header:
             token = auth_header.strip()
-        # Fallbacks: cookie or query param
-        token = token or request.cookies.get('authToken') or request.args.get('token')
-
-        if token != 'authenticated':
+        
+        # Fallback to cookie
+        if not token:
+            token = request.cookies.get('authToken')
+        
+        if not token:
+            if DEBUG_MODE:
+                print("[AUTH] No token provided")
             return jsonify({"message": "Unauthorized"}), 401
+
+        # Validate JWT token with leeway for clock skew
+        try:
+            secret_key = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-this")
+            payload = jwt.decode(token, secret_key, algorithms=["HS256"], leeway=60)
+        except jwt.ExpiredSignatureError:
+            if DEBUG_MODE:
+                print("[AUTH] Token expired")
+            return jsonify({"message": "Token has expired"}), 401
+        except jwt.InvalidTokenError as e:
+            if DEBUG_MODE:
+                print(f"[AUTH] Invalid token: {e}")
+            return jsonify({"message": "Invalid token"}), 401
 
         return f(*args, **kwargs)
     return decorated_function
@@ -79,7 +101,7 @@ def submit_json_to_mongo():
         collection = db.insurance
         
         # Add timestamp
-        data_payload['created_at'] = datetime.utcnow()
+        data_payload['created_at'] = datetime.now(timezone.utc)  # FIXED
         
         result = collection.insert_one(data_payload)
             
@@ -165,20 +187,16 @@ def upload_gaps_file():
         if not gaps_file:
             return jsonify({"message": "Gaps file is required."}), 400
         
-        print(f"Received file: {gaps_file.filename}")  # Debug
-        
         from io import BytesIO
         import pandas as pd
         
         # Read and validate the file - support both Excel and CSV
         file_content = gaps_file.read()
-        print(f"File size: {len(file_content)} bytes")  # Debug
         
         if gaps_file.filename.endswith('.csv'):
             gaps_df = pd.read_csv(BytesIO(file_content))
         else:
             gaps_df = pd.read_excel(BytesIO(file_content))
-        print(f"DataFrame shape: {gaps_df.shape}")  # Debug
         
         # Convert to JSON for storage
         gaps_data = gaps_df.to_dict('records')
@@ -190,17 +208,17 @@ def upload_gaps_file():
             "file_type": "gaps",
             "data": gaps_data,
             "columns": list(gaps_df.columns),
-            "uploaded_at": datetime.utcnow()
+            "uploaded_at": datetime.now(timezone.utc)
         })
         
-        print("Gaps file uploaded successfully")  # Debug
         return jsonify({"message": "Gaps file uploaded successfully."}), 201
         
     except Exception as e:
-        print(f"Error uploading gaps file: {str(e)}")  # Debug
-        import traceback
-        traceback.print_exc()  # Print full stack trace
-        return jsonify({"message": "Failed to upload gaps file.", "error": str(e)}), 500
+        if DEBUG_MODE:
+            print(f"Error uploading gaps file: {str(e)}")
+            import traceback
+            traceback.print_exc()
+        return jsonify({"message": "Failed to upload gaps file."}), 500
 
 # Route for retrieving gaps file info
 @app.route('/api/gaps-file', methods=['GET'])
@@ -238,18 +256,13 @@ def append_care_gaps():
         if not master_file:
             return jsonify({"message": "Master file is required."}), 400
         
-        print(f"Master file received: {master_file.filename}")  # Debug
-        
         # Get gaps file from database
         gaps_doc = db.system_files.find_one({"file_type": "gaps"})
         if not gaps_doc:
             return jsonify({"message": "Gaps file not found. Please upload it in Settings."}), 400
         
-        print(f"Gaps file found in DB with {len(gaps_doc.get('data', []))} rows")  # Debug
-        
         # Get the enableToBeRemoved boolean
         enable_to_be_removed = request.form.get('enableToBeRemoved', 'false').lower() == 'true'
-        print(f"Enable to be removed: {enable_to_be_removed} (type: {type(enable_to_be_removed)})")  # Debug
         
         # Get care gap files and their config IDs
         care_gap_files_with_configs = []
@@ -262,29 +275,22 @@ def append_care_gaps():
             care_file = request.files.get(file_key)
             config_id = request.form.get(config_key)
             
-            print(f"Looking for {file_key}: {care_file.filename if care_file else None}, config: {config_id}")  # Debug
-            
             if not care_file or not config_id:
                 break
                 
             care_gap_files_with_configs.append((care_file, config_id))
             file_index += 1
         
-        print(f"Total care gap files: {len(care_gap_files_with_configs)}")  # Debug
-        
         if len(care_gap_files_with_configs) == 0:
             return jsonify({"message": "At least one care gap sheet is required."}), 400
         
         # Call the merging function
-        print("Calling merge_care_gap_sheets...")  # Debug
         merged_file_bytes = merge_care_gap_sheets(
             master_file,
             care_gap_files_with_configs,
             db,
             enable_to_be_removed
         )
-        
-        print(f"Merge complete, file size: {len(merged_file_bytes) if merged_file_bytes else 0} bytes")  # Debug
         
         if not merged_file_bytes:
             return jsonify({"message": "Merging returned empty file."}), 500
@@ -299,10 +305,11 @@ def append_care_gaps():
         )
         
     except Exception as e:
-        print(f"Error in append_care_gaps: {e}")
-        import traceback
-        traceback.print_exc()  # Print full stack trace
-        return jsonify({"message": "Merging failed.", "error": str(e)}), 500
+        if DEBUG_MODE:
+            print(f"Error in append_care_gaps: {e}")
+            import traceback
+            traceback.print_exc()
+        return jsonify({"message": "Merging failed."}), 500
     
 # Route for sorting PDFs
 @app.route('/api/sort-pdfs', methods=['POST'])
@@ -314,27 +321,17 @@ def sort_pdfs_route():
         if not master_file:
             return jsonify({"message": "Master file is required."}), 400
         
-        print(f"Master file received: {master_file.filename}")
-        
         # Get the uploaded PDF files
         pdf_files = request.files.getlist('pdfFiles')
         if not pdf_files or len(pdf_files) == 0:
             return jsonify({"message": "At least one PDF file is required."}), 400
-        
-        print(f"Total PDF files received: {len(pdf_files)}")
         
         # Limit to prevent memory issues
         if len(pdf_files) > 200:
             return jsonify({"message": "Maximum 200 PDF files allowed at once. Please split into smaller batches."}), 400
         
         # Call the sorting function
-        print("Calling sort_pdfs...")
-        sorted_zip_bytes = sort_pdfs(
-            master_file,
-            pdf_files
-        )
-        
-        print(f"Sorting complete, ZIP size: {len(sorted_zip_bytes) if sorted_zip_bytes else 0} bytes")
+        sorted_zip_bytes = sort_pdfs(master_file, pdf_files)
         
         if not sorted_zip_bytes:
             return jsonify({"message": "Sorting returned empty ZIP."}), 500
@@ -349,10 +346,11 @@ def sort_pdfs_route():
         )
         
     except Exception as e:
-        print(f"Error in sort_pdfs_route: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"message": "Sorting failed.", "error": str(e)}), 500
+        if DEBUG_MODE:
+            print(f"Error in sort_pdfs_route: {e}")
+            import traceback
+            traceback.print_exc()
+        return jsonify({"message": "Sorting failed."}), 500
 
 # Route for login (NO AUTH REQUIRED)
 @app.route('/api/login', methods=['POST'])
@@ -366,13 +364,20 @@ def login():
 
         correct_password = os.getenv("APP_PASSWORD")
         if password == correct_password:
-            token = "authenticated"
+            # Generate JWT token
+            secret_key = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-this")
+            now = datetime.now(timezone.utc)
+            payload = {
+                "authenticated": True,
+                "iat": int(now.timestamp()),
+                "exp": int((now + timedelta(days=7)).timestamp())
+            }
+            token = jwt.encode(payload, secret_key, algorithm="HS256")
+            
             resp = jsonify({
                 "message": "Login successful",
                 "token": token
             })
-            # For localhost dev: secure=False, samesite='Lax'
-            # Set COOKIE_SECURE=true in env if serving over HTTPS to switch to SameSite=None; Secure
             secure = os.getenv("COOKIE_SECURE", "false").lower() == "true"
             resp.set_cookie(
                 "authToken",
@@ -388,8 +393,11 @@ def login():
             return jsonify({"message": "Incorrect password"}), 401
 
     except Exception as e:
-        print(f"Error in login: {e}")
-        return jsonify({"message": "Login failed.", "error": str(e)}), 500
+        if DEBUG_MODE:
+            print(f"Error in login: {e}")
+            import traceback
+            traceback.print_exc()
+        return jsonify({"message": "Login failed."}), 500
 
 # Health check endpoint (NO AUTH REQUIRED)
 @app.route('/api/health', methods=['GET'])

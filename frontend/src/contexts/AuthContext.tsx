@@ -11,30 +11,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);  // Add loading state
+    const [isLoading, setIsLoading] = useState(true);
     const navigate = useNavigate();
 
     // Check if user is already logged in on mount
     useEffect(() => {
-        const authToken = localStorage.getItem('auth_token');
+        const authToken = localStorage.getItem('authToken'); // CHANGED from 'auth_token'
         const loginTime = localStorage.getItem('login_time');
         
-        if (authToken === 'authenticated' && loginTime) {
+        if (authToken && loginTime) {
             const now = new Date().getTime();
             const loginTimestamp = parseInt(loginTime);
             const hoursSinceLogin = (now - loginTimestamp) / (1000 * 60 * 60);
 
-            // Token expires after 1 hour
-            if (hoursSinceLogin < 1) {
+            // Token expires after 7 days (matching backend)
+            if (hoursSinceLogin < 168) { // 7 days * 24 hours
                 setIsAuthenticated(true);
             } else {
                 // Token expired, clear it
-                localStorage.removeItem('auth_token');
+                localStorage.removeItem('authToken'); // CHANGED from 'auth_token'
                 localStorage.removeItem('login_time');
                 setIsAuthenticated(false);
             }
         }
-        setIsLoading(false);  // Done checking
+        setIsLoading(false);
     }, []);
 
     const login = async (password: string): Promise<boolean> => {
@@ -45,18 +45,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({ password }),
             });
 
             if (response.ok) {
                 const data = await response.json();
-                setIsAuthenticated(true);
-                localStorage.setItem('auth_token', data.token);
-                localStorage.setItem('login_time', new Date().getTime().toString());
-                return true;
-            } else {
+                
+                if (data.token) {
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('login_time', new Date().getTime().toString());
+                    setIsAuthenticated(true);
+                    return true;
+                }
                 return false;
             }
+            return false;
         } catch (error) {
             console.error('Login error:', error);
             return false;
@@ -65,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const logout = () => {
         setIsAuthenticated(false);
-        localStorage.removeItem('auth_token');
+        localStorage.removeItem('authToken'); // CHANGED from 'auth_token'
         localStorage.removeItem('login_time');
         navigate('/login');
     };
@@ -79,8 +83,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
     const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider');
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
 };
