@@ -17,7 +17,12 @@ app = Flask(__name__)
 # Configure CORS to allow credentials
 CORS(app, 
      supports_credentials=True,
-     origins=["http://localhost:3000", "https://nch-auditing.onrender.com", os.getenv("FRONTEND_URL", "http://localhost:3000")],
+     origins=[
+         "http://localhost:3000",
+         "https://nch-auditing.onrender.com",
+         "https://nch-auditing.netlify.app",  # ADD THIS LINE
+         os.getenv("FRONTEND_URL", "http://localhost:3000")
+     ],
      allow_headers=["Content-Type", "Authorization"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
