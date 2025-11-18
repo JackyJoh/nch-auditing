@@ -2,15 +2,45 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../../Layout';
 import { useNavigate } from 'react-router-dom';
 
+interface ActivityItem {
+    id: string;
+    type: 'append_gaps' | 'sort' | 'upload_gaps' | 'edit_insurance' | 'other';
+    description: string;
+    timestamp: string;
+    user?: string;
+    status?: 'success' | 'error' | 'warning';
+}
+
 const Settings: React.FC = () => {
     const navigate = useNavigate();
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
     const [gapsFile, setGapsFile] = useState<File | null>(null);
     const [gapsFileInfo, setGapsFileInfo] = useState<any>(null);
     const [loading, setLoading] = useState(false);
+    const [history, setHistory] = useState<ActivityItem[]>([]);
 
     useEffect(() => {
         fetchGapsFileInfo();
+        // Fetch history
+        fetch(`${API_BASE_URL}/api/history`, {
+            credentials: 'include',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Failed to fetch history');
+        })
+        .then(data => {
+            setHistory(data);
+        })
+        .catch(error => {
+            console.error("Error fetching history:", error);
+        });
+
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -92,6 +122,53 @@ const Settings: React.FC = () => {
         }
     };
 
+    const getHistoryIcon = (type: ActivityItem['type']) => {
+        switch (type) {
+            case 'upload_gaps':
+                // Upload/Cloud Arrow Up icon (Heroicons style)
+                return (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0l-4 4m4-4l4 4" />
+                    </svg>
+                );
+            case 'append_gaps':
+                // Merge/join icon
+                return (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7v10M8 17l-3-3m3 3l3-3M16 7v10M16 7l3 3m-3-3l-3 3" />
+                    </svg>
+                );
+            case 'sort':
+                // Sort icon
+                return (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h8m-8 6h16" />
+                    </svg>
+                );
+            default:
+                // Default document icon
+                return (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10M7 11h10M7 15h6" />
+                    </svg>
+                );
+        }
+    };
+
+    const formatLocalTime = (isoString: string) => {
+        // Handles both ISO string and Date object
+        const date = new Date(isoString);
+        return date.toLocaleString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            timeZoneName: 'short'
+        });
+    };
+
     return (
         <Layout>
             <div className="p-4 h-full flex flex-col">
@@ -160,10 +237,54 @@ const Settings: React.FC = () => {
                 </div>
 
                 {/* History Section */}
-                <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-6">
+                <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-6 overflow-hidden flex flex-col">
                     <h3 className="text-white text-2xl font-bold mb-4">Recent Activity</h3>
-                    <div className="text-white/50 text-center py-12">
-                        <p>No recent activity to display</p>
+                    <div className="flex-1 overflow-y-auto">
+                        {history.length === 0 ? (
+                            <div className="text-white/50 text-center py-12">
+                                <p>No recent activity to display</p>    
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {history.map((history) => (
+                                    <div
+                                        key={history.id}
+                                        className="bg-slate-800/40 border border-slate-600/30 rounded-lg p-4 hover:bg-slate-800/60 transition-all duration-200"
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex-shrink-0 w-10 h-10 rounded-lg border flex items-center justify-center text-xl bg-slate-600/20 border-slate-500/50 text-slate-300">
+                                                {getHistoryIcon(history.type)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-white font-medium mb-1">{history.description}</p>
+                                                <div className="flex items-center gap-3 text-sm text-white/60">
+                                                    <span>{formatLocalTime(history.timestamp)}</span>
+                                                    {history.user && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span>by {history.user}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {history.status && (
+                                                <div className="flex-shrink-0">
+                                                    {history.status === 'success' && (
+                                                        <span className="text-green-400 text-sm">✓</span>
+                                                    )}
+                                                    {history.status === 'error' && (
+                                                        <span className="text-red-400 text-sm">✗</span>
+                                                    )}
+                                                    {history.status === 'warning' && (
+                                                        <span className="text-yellow-400 text-sm">⚠</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

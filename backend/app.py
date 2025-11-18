@@ -9,6 +9,7 @@ from sorting import sort_pdfs
 from merging import merge_care_gap_sheets
 from functools import wraps
 import jwt
+from pytz import timezone as pytz_timezone
 
 load_dotenv()
 
@@ -17,12 +18,7 @@ app = Flask(__name__)
 # Configure CORS to allow credentials
 CORS(app, 
      supports_credentials=True,
-     origins=[
-         "http://localhost:3000",
-         "https://nch-auditing.onrender.com",
-         "https://nch-auditing.netlify.app",  # ADD THIS LINE
-         os.getenv("FRONTEND_URL", "http://localhost:3000")
-     ],
+     resources={r"/*": {"origins": "*"}},  # ⚠️ ALLOWS ALL ORIGINS - SECURITY RISK
      allow_headers=["Content-Type", "Authorization"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
@@ -85,6 +81,13 @@ def require_auth(f):
 
         return f(*args, **kwargs)
     return decorated_function
+
+# Function to get current time in the server's local timezone
+def get_localized_now():
+    # Use server's local timezone, or set to US/Eastern if you want EST/EDT
+    # Change 'US/Eastern' to your preferred timezone if needed
+    local_tz = os.getenv("LOCAL_TIMEZONE", "US/Eastern")
+    return datetime.now(pytz_timezone(local_tz))
 
 # Route for adding insurance configurations
 @app.route('/api/insurance-configs', methods=['POST'])
@@ -213,8 +216,23 @@ def upload_gaps_file():
             "file_type": "gaps",
             "data": gaps_data,
             "columns": list(gaps_df.columns),
-            "uploaded_at": datetime.now(timezone.utc)
+            "uploaded_at": get_localized_now().isoformat()
         })
+        
+        # Add uploaded gaps file process to history in mongo
+        if db is not None:
+            try:
+                collection_history = db.history
+                collection_history.insert_one({
+                    "type": "upload_gaps",
+                    "description": f"Uploaded Gap Name Keys file ({len(gaps_data)} rows)",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "success"
+                })
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {e}")
         
         return jsonify({"message": "Gaps file uploaded successfully."}), 201
         
@@ -223,6 +241,22 @@ def upload_gaps_file():
             print(f"Error uploading gaps file: {str(e)}")
             import traceback
             traceback.print_exc()
+        
+        # Add failed status to history in mongo
+        if db is not None:
+            try:
+                collection_history = db.history
+                collection_history.insert_one({
+                    "type": "upload_gaps",
+                    "description": "Failed to upload Gap Name Keys file",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "error"
+                })
+            except Exception as hist_error:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {hist_error}")
+        
         return jsonify({"message": "Failed to upload gaps file."}), 500
 
 # Route for retrieving gaps file info
@@ -300,6 +334,21 @@ def append_care_gaps():
         if not merged_file_bytes:
             return jsonify({"message": "Merging returned empty file."}), 500
         
+        # Add merging process to history in mongo
+        if db is not None:
+            try:
+                collection = db.history
+                collection.insert_one({
+                    "type": "append_gaps",
+                    "description": f'Appended {len(care_gap_files_with_configs)} care gap sheet{"s" if len(care_gap_files_with_configs) != 1 else ""}',
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "success"
+                })
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {e}")                
+
         # Send the merged file back as a download
         from io import BytesIO
         return send_file(
@@ -314,6 +363,22 @@ def append_care_gaps():
             print(f"Error in append_care_gaps: {e}")
             import traceback
             traceback.print_exc()
+        
+        # Add failed status to history in mongo
+        if db is not None:
+            try:
+                collection = db.history
+                collection.insert_one({
+                    "type": "append_gaps",
+                    "description": "Failed to append care gap sheets",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "error"
+                })
+            except Exception as hist_error:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {hist_error}")
+        
         return jsonify({"message": "Merging failed."}), 500
     
 # Route for sorting PDFs
@@ -339,8 +404,37 @@ def sort_pdfs_route():
         sorted_zip_bytes = sort_pdfs(master_file, pdf_files)
         
         if not sorted_zip_bytes:
+            # Add failure to sorting history in mongo
+            if db is not None:
+                try:
+                    collection = db.history
+                    collection.insert_one({
+                        "type": "sort",
+                        "description": "Sorting returned empty ZIP",
+                        "timestamp": get_localized_now().isoformat(),
+                        "user": "Admin",
+                        "status": "error"
+                    })
+                except Exception as e:
+                    if DEBUG_MODE:
+                        print(f"Error saving history: {e}")
             return jsonify({"message": "Sorting returned empty ZIP."}), 500
         
+        # Add sorted pdfs process to history in mongo
+        if db is not None:
+            try:
+                collection = db.history
+                collection.insert_one({
+                    "type": "sort",
+                    "description": f'Sorted {len(pdf_files)} PDF{"s" if len(pdf_files) != 1 else ""}',
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "success"
+                })
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {e}")
+
         # Send the sorted ZIP back as a download
         from io import BytesIO
         return send_file(
@@ -355,7 +449,40 @@ def sort_pdfs_route():
             print(f"Error in sort_pdfs_route: {e}")
             import traceback
             traceback.print_exc()
+        
+        # Add failed status to history in mongo
+        if db is not None:
+            try:
+                collection = db.history
+                collection.insert_one({
+                    "type": "sort",
+                    "description": "Failed to sort PDFs",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "error"
+                })
+            except Exception as hist_error:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {hist_error}")
+        
         return jsonify({"message": "Sorting failed."}), 500
+
+# Route for retrieving all history
+@app.route('/api/history', methods=['GET'])
+@require_auth
+def get_history():
+    if db is None:
+        return jsonify({"message": "Database connection is down."}), 503
+    try:
+        db_collection = db.history
+        history_records = list(db_collection.find().sort("timestamp", -1))
+        for record in history_records:
+            record['_id'] = str(record['_id'])  # Convert ObjectId to string
+            if 'timestamp' in record and isinstance(record['timestamp'], datetime):
+                record['timestamp'] = record['timestamp'].isoformat()
+        return jsonify(history_records), 200
+    except Exception as e:
+        return jsonify({"message": "Failed to retrieve history.", "error": str(e)}), 500
 
 # Route for login (NO AUTH REQUIRED)
 @app.route('/api/login', methods=['POST'])
@@ -403,6 +530,8 @@ def login():
             import traceback
             traceback.print_exc()
         return jsonify({"message": "Login failed."}), 500
+
+
 
 # Health check endpoint (NO AUTH REQUIRED)
 @app.route('/api/health', methods=['GET'])
