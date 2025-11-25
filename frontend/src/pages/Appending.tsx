@@ -46,14 +46,22 @@ const Appending: React.FC = () => {
 
     const fetchConfigs = async () => {
         try {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
             const response = await fetch(`${API_BASE_URL}/api/insurance-configs`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken') || 'authenticated'}`,
+                    'Authorization': `Bearer ${token}`,
                 },
             });
             if (response.ok) {
                 const data = await response.json();
                 setConfigs(data);
+            } else if (response.status === 401) {
+                localStorage.removeItem('authToken');
+                window.location.href = '/login';
             }
         } catch (error) {
             console.error("Error fetching configs:", error);
@@ -86,6 +94,11 @@ const Appending: React.FC = () => {
 
         setLoading(true);
         try {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
             // Create FormData to send files
             const formData = new FormData();
             
@@ -106,7 +119,7 @@ const Appending: React.FC = () => {
             const response = await fetch(`${API_BASE_URL}/api/append-care-gaps`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken') || 'authenticated'}`,
+                    'Authorization': `Bearer ${token}`,
                 },
                 body: formData,
             });
@@ -128,6 +141,9 @@ const Appending: React.FC = () => {
                 document.body.removeChild(a);
                 
                 alert("Files merged successfully! Check your downloads.");
+            } else if (response.status === 401) {
+                localStorage.removeItem('authToken');
+                window.location.href = '/login';
             } else {
                 const error = await response.json();
                 alert(`Failed to merge files: ${error.message}`);

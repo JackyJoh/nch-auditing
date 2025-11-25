@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface ActivityItem {
     id: string;
-    type: 'append_gaps' | 'sort' | 'upload_gaps' | 'edit_insurance' | 'other';
+    type: 'append_gaps' | 'sort' | 'upload_gaps' | 'edit_insurance' | 'contacts_vcf' | 'other';
     description: string;
     timestamp: string;
     user?: string;
@@ -143,6 +143,13 @@ const Settings: React.FC = () => {
                 return (
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h8m-8 6h16" />
+                    </svg>
+                );
+            case 'contacts_vcf':
+                // Filled phone icon
+                return (
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M22 16.92v2.08a2 2 0 01-2.18 2A19.86 19.86 0 013 5.18 2 2 0 015 3h2.09a2 2 0 012 1.72c.13.81.36 1.6.7 2.34a2 2 0 01-.45 2.11l-1.27 1.27a16 16 0 006.58 6.58l1.27-1.27a2 2 0 012.11-.45c.74.34 1.53.57 2.34.7a2 2 0 011.72 2z"/>
                     </svg>
                 );
             default:

@@ -43,6 +43,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           }`}>
             Master Sheet
           </Link>
+          <Link to="/contacts" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+            location.pathname === '/contacts'
+              ? 'bg-slate-700/80 text-white border border-slate-500/50'
+              : 'text-white/80 hover:text-white hover:bg-white/10'
+          }`}>
+            Contacts
+          </Link>
           <Link to="/settings" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
             location.pathname.startsWith('/settings')
               ? 'bg-slate-700/80 text-white border border-slate-500/50' 
