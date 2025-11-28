@@ -6,10 +6,14 @@ import os
 from pymongo import MongoClient
 from bson import ObjectId
 from sorting import sort_pdfs
-from merging import merge_care_gap_sheets
+from contacts import to_vcf
 from functools import wraps
 import jwt
 from pytz import timezone as pytz_timezone
+import boto3
+import base64
+import json
+import math
 
 load_dotenv()
 
@@ -237,10 +241,10 @@ def upload_gaps_file():
         return jsonify({"message": "Gaps file uploaded successfully."}), 201
         
     except Exception as e:
-        if DEBUG_MODE:
-            print(f"Error uploading gaps file: {str(e)}")
-            import traceback
-            traceback.print_exc()
+        # if DEBUG_MODE:
+        #     print(f"Error uploading gaps file: {str(e)}")
+        #     import traceback
+        #     traceback.print_exc()
         
         # Add failed status to history in mongo
         if db is not None:
@@ -323,18 +327,53 @@ def append_care_gaps():
         if len(care_gap_files_with_configs) == 0:
             return jsonify({"message": "At least one care gap sheet is required."}), 400
         
-        # Call the merging function
-        merged_file_bytes = merge_care_gap_sheets(
-            master_file,
-            care_gap_files_with_configs,
-            db,
-            enable_to_be_removed
+
+        # Prepare care_gap_files for Lambda
+        care_gap_files_payload = []
+        for f, config_id in care_gap_files_with_configs:
+            config = db.insurance.find_one({"_id": ObjectId(config_id)})
+            if not config:
+                return jsonify({"message": f"Config not found for ID {config_id}"}), 400
+            care_gap_files_payload.append({
+                "file": base64.b64encode(f.read()).decode(),
+                "filename": f.filename,
+                "config_fields": config['fields']
+            })
+
+        # Prepare NAME mapping data for Lambda
+        gaps_data = clean_nans(gaps_doc.get("data", []))
+        gaps_columns = gaps_doc.get("columns", [])
+
+        # Prepare Lambda payload
+        lambda_payload = {
+            "master_file": base64.b64encode(master_file.read()).decode(),
+            "master_filename": master_file.filename,
+            "care_gap_files": care_gap_files_payload,
+            "gaps_data": gaps_data,
+            "gaps_columns": gaps_columns,
+            "enable_to_be_removed": enable_to_be_removed
+        }
+
+        # Call Lambda
+        lambda_client = boto3.client(
+            'lambda',
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_REGION")
         )
-        
-        if not merged_file_bytes:
-            return jsonify({"message": "Merging returned empty file."}), 500
-        
+        response = lambda_client.invoke(
+            FunctionName='mergeCareGaps',
+            Payload=json.dumps(lambda_payload, allow_nan=False)
+        )
+        result = json.loads(response['Payload'].read())
+
+        if result.get('status') != 'success' or 'merged_file' not in result:
+            return jsonify({"message": result.get('error', 'Merging failed.')}), 500
+
+        merged_file_bytes = base64.b64decode(result['merged_file'])
+
         # Add merging process to history in mongo
+        
         if db is not None:
             try:
                 collection = db.history
@@ -343,7 +382,7 @@ def append_care_gaps():
                     "description": f'Appended {len(care_gap_files_with_configs)} care gap sheet{"s" if len(care_gap_files_with_configs) != 1 else ""}',
                     "timestamp": get_localized_now().isoformat(),
                     "user": "Admin",
-                    "status": "success"
+                    "status": result.get('status')
                 })
             except Exception as e:
                 if DEBUG_MODE:
@@ -359,11 +398,6 @@ def append_care_gaps():
         )
         
     except Exception as e:
-        if DEBUG_MODE:
-            print(f"Error in append_care_gaps: {e}")
-            import traceback
-            traceback.print_exc()
-        
         # Add failed status to history in mongo
         if db is not None:
             try:
@@ -380,6 +414,55 @@ def append_care_gaps():
                     print(f"Error saving history: {hist_error}")
         
         return jsonify({"message": "Merging failed."}), 500
+    
+# Route for converting contacts to VCF
+@app.route('/api/contacts', methods=['POST'])
+@require_auth
+def convert_contacts_to_vcf():
+    try:
+        contact_file = request.files.get('contactSheet')
+        if not contact_file:
+            return jsonify({"message": "Contact sheet file is required."}), 400
+        
+        name_column = request.form.get('nameColumn')
+        number_column = request.form.get('numberColumn')
+        
+        if not name_column or not number_column:
+            return jsonify({"message": "Name column and number column are required."}), 400
+        
+        vcf_response = to_vcf(contact_file, name_column, number_column)
+        # Add contact process to history in mongo
+        if db is not None:
+            try:
+                collection = db.history
+                collection.insert_one({
+                    "type": "contacts_vcf",
+                    "description": f'Converted contacts to VCF from {contact_file.filename}',
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "success"
+                })
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {e}")
+        return vcf_response
+
+    except Exception as e:
+        # Add failed status to history in mongo
+        if db is not None:
+            try:
+                collection = db.history
+                collection.insert_one({
+                    "type": "contacts_vcf",
+                    "description": "Failed to convert contacts to VCF",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "error"
+                })
+            except Exception as hist_error:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {hist_error}")
+        return jsonify({"message": "VCF conversion failed."}), 500
     
 # Route for sorting PDFs
 @app.route('/api/sort-pdfs', methods=['POST'])
@@ -445,11 +528,6 @@ def sort_pdfs_route():
         )
         
     except Exception as e:
-        if DEBUG_MODE:
-            print(f"Error in sort_pdfs_route: {e}")
-            import traceback
-            traceback.print_exc()
-        
         # Add failed status to history in mongo
         if db is not None:
             try:
@@ -525,10 +603,6 @@ def login():
             return jsonify({"message": "Incorrect password"}), 401
 
     except Exception as e:
-        if DEBUG_MODE:
-            print(f"Error in login: {e}")
-            import traceback
-            traceback.print_exc()
         return jsonify({"message": "Login failed."}), 500
 
 
@@ -537,6 +611,16 @@ def login():
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({"status": "ok", "message": "Backend is running"}), 200
+
+def clean_nans(obj):
+    if isinstance(obj, dict):
+        return {k: clean_nans(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_nans(v) for v in obj]
+    elif isinstance(obj, float) and math.isnan(obj):
+        return None
+    else:
+        return obj
 
 if __name__ == '__main__':
     app.run(debug=True)
