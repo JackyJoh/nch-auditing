@@ -14,6 +14,8 @@ import boto3
 import base64
 import json
 import math
+from io import BytesIO
+from zipfile import ZipFile
 
 load_dotenv()
 
@@ -473,55 +475,135 @@ def sort_pdfs_route():
         master_file = request.files.get('masterFile')
         if not master_file:
             return jsonify({"message": "Master file is required."}), 400
-        
-        # Get the uploaded PDF files
+
+        # Accept either a zip upload (zipFile) or individual pdfFiles (or both)
+        extracted_pdfs = []
+        zip_file = request.files.get('zipFile')
         pdf_files = request.files.getlist('pdfFiles')
-        if not pdf_files or len(pdf_files) == 0:
+
+        # If a zip was uploaded, extract PDFs from it
+        if zip_file and getattr(zip_file, "filename", ""):
+            if not zip_file.filename.lower().endswith('.zip'):
+                return jsonify({"message": "Uploaded file must be a .zip archive."}), 400
+            try:
+                with ZipFile(zip_file) as z:
+                    for member in z.namelist():
+                        if member.lower().endswith('.pdf'):
+                            pdf_buf = BytesIO(z.read(member))
+                            pdf_buf.filename = member.split('/')[-1]
+                            extracted_pdfs.append(pdf_buf)
+            except Exception as e:
+                print(f"Error processing ZIP file {zip_file.filename}: {e}")
+                return jsonify({"message": "Failed to process the ZIP file. Ensure it is a valid archive."}), 400
+
+        # Also accept individual PDF file uploads (if any)
+        if pdf_files:
+            for f in pdf_files:
+                if f and getattr(f, "filename", "") and f.filename.lower().endswith('.pdf'):
+                    extracted_pdfs.append(f)
+
+        if len(extracted_pdfs) == 0:
             return jsonify({"message": "At least one PDF file is required."}), 400
         
         # Limit to prevent memory issues
-        if len(pdf_files) > 200:
+        if len(extracted_pdfs) > 200:
             return jsonify({"message": "Maximum 200 PDF files allowed at once. Please split into smaller batches."}), 400
         
-        # Call the sorting function
-        sorted_zip_bytes = sort_pdfs(master_file, pdf_files)
-        
-        if not sorted_zip_bytes:
-            # Add failure to sorting history in mongo
-            if db is not None:
-                try:
-                    collection = db.history
-                    collection.insert_one({
-                        "type": "sort",
-                        "description": "Sorting returned empty ZIP",
-                        "timestamp": get_localized_now().isoformat(),
-                        "user": "Admin",
-                        "status": "error"
-                    })
-                except Exception as e:
-                    if DEBUG_MODE:
-                        print(f"Error saving history: {e}")
-            return jsonify({"message": "Sorting returned empty ZIP."}), 500
-        
+        # Upload master file and PDFs to S3
+        s3_bucket = os.getenv("S3_BUCKET_NAME")
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_REGION")
+        )
+
+        # Upload master file
+        master_s3_key = f"uploads/{datetime.now(timezone.utc).isoformat()}_{master_file.filename}"
+        s3_client.upload_fileobj(master_file, s3_bucket, master_s3_key)
+
+        # Upload PDFs and collect S3 keys
+        pdf_s3_keys = []
+        for f in extracted_pdfs:
+            pdf_s3_key = f"uploads/{datetime.now(timezone.utc).isoformat()}_{f.filename}"
+            f.seek(0)
+            s3_client.upload_fileobj(f, s3_bucket, pdf_s3_key)
+            pdf_s3_keys.append({
+                "s3_key": pdf_s3_key,
+                "filename": f.filename
+            })
+
+        # Prepare Lambda payload with S3 references
+        lambda_payload = {
+            "master_s3_key": master_s3_key,
+            "pdf_files": pdf_s3_keys,
+            "s3_bucket": s3_bucket
+        }
+
+        # Call Lambda
+        print("Invoking Lambda for sorting PDFs...")
+        lambda_client = boto3.client(
+            'lambda',
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_REGION")
+        )
+        response = lambda_client.invoke(
+            FunctionName='sortPDFs',
+            Payload=json.dumps(lambda_payload).encode()
+        )
+
+        # Minimal logging only (do not print full response/payload)
+        print(f"Lambda invoke StatusCode: {response.get('StatusCode')}")
+
+        # Read and decode payload safely (handle double-encoded 'body')
+        payload_content = response['Payload'].read()
+        try:
+            lambda_result = json.loads(payload_content)
+        except Exception:
+            # Fall back to empty result if payload not JSON
+            lambda_result = {}
+
+        if isinstance(lambda_result, dict) and "body" in lambda_result:
+            try:
+                lambda_body = json.loads(lambda_result["body"])
+            except Exception:
+                lambda_body = lambda_result.get("body", {})
+        else:
+            lambda_body = lambda_result
+
+        # Validate result
+        if not isinstance(lambda_body, dict) or lambda_body.get('status') != 'success' or 's3_key' not in lambda_body:
+            print("Lambda error:", lambda_body.get('error', 'Unknown error') if isinstance(lambda_body, dict) else 'Invalid lambda response')
+            if DEBUG_MODE:
+                import traceback
+                traceback.print_exc()
+            return jsonify({"message": (lambda_body.get('error') if isinstance(lambda_body, dict) else 'Sorting failed.')}), 500
+
+        # Download the ZIP file from S3
+        zip_s3_key = lambda_body['s3_key']
+        zip_obj = BytesIO()
+        s3_client.download_fileobj(s3_bucket, zip_s3_key, zip_obj)
+        zip_obj.seek(0)
+
         # Add sorted pdfs process to history in mongo
         if db is not None:
             try:
                 collection = db.history
                 collection.insert_one({
                     "type": "sort",
-                    "description": f'Sorted {len(pdf_files)} PDF{"s" if len(pdf_files) != 1 else ""}',
+                    "description": f'Sorted {len(extracted_pdfs)} PDF{"s" if len(extracted_pdfs) != 1 else ""}',
                     "timestamp": get_localized_now().isoformat(),
                     "user": "Admin",
-                    "status": "success"
+                    "status": lambda_body.get('status')
                 })
             except Exception as e:
                 if DEBUG_MODE:
                     print(f"Error saving history: {e}")
 
         # Send the sorted ZIP back as a download
-        from io import BytesIO
         return send_file(
-            BytesIO(sorted_zip_bytes),
+            zip_obj,
             mimetype='application/zip',
             as_attachment=True,
             download_name='sorted_pdfs.zip'
@@ -542,7 +624,11 @@ def sort_pdfs_route():
             except Exception as hist_error:
                 if DEBUG_MODE:
                     print(f"Error saving history: {hist_error}")
-        
+        # Debug output for general errors
+        print("Exception in sort_pdfs_route:", str(e))
+        if DEBUG_MODE:
+            import traceback
+            traceback.print_exc()
         return jsonify({"message": "Sorting failed."}), 500
 
 # Route for retrieving all history

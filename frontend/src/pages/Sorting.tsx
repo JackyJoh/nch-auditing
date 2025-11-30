@@ -5,17 +5,17 @@ const Sorting: React.FC = () => {
     const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || "http://localhost:5000").replace(/\/+$/, ''); // Remove trailing slashes
     
     const [masterFile, setMasterFile] = useState<File | null>(null);
-    const [pdfFiles, setPdfFiles] = useState<FileList | null>(null);
+    const [zipFile, setZipFile] = useState<File | null>(null); // Updated to handle .zip file
     const [loading, setLoading] = useState(false);
 
-    const handlePdfFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleZipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            setPdfFiles(e.target.files);
+            setZipFile(e.target.files[0]); // Only allow one .zip file
         }
     };
 
     const handleSort = async () => {
-        if (!masterFile || !pdfFiles || pdfFiles.length === 0) {
+        if (!masterFile || !zipFile) {
             alert("Please upload all required files");
             return;
         }
@@ -24,11 +24,7 @@ const Sorting: React.FC = () => {
         try {
             const formData = new FormData();
             formData.append('masterFile', masterFile);
-            
-            // Convert FileList to Array before using forEach
-            Array.from(pdfFiles).forEach((file) => {
-                formData.append('pdfFiles', file);
-            });
+            formData.append('zipFile', zipFile); // Append the .zip file
             
             const response = await fetch(`${API_BASE_URL}/api/sort-pdfs`, {
                 method: 'POST',
@@ -104,36 +100,32 @@ const Sorting: React.FC = () => {
                     </div>
                 </div>
 
-                {/* PDF Folder Upload */}
+                {/* ZIP File Upload */}
                 <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 overflow-hidden flex flex-col">
-                    <h2 className="text-white text-lg font-bold mb-2">PDF Folder (Required)</h2>
-                    <p className="text-white/70 text-xs mb-3">Select the folder containing all PDFs to be sorted.</p>
+                    <h2 className="text-white text-lg font-bold mb-2">PDF ZIP File (Required)</h2>
+                    <p className="text-white/70 text-xs mb-3">Upload a ZIP file containing all PDFs to be sorted.</p>
                     
                     <label className="flex-1 cursor-pointer flex items-center justify-center">
                         <div className={`w-full h-full border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 flex items-center justify-center ${
-                            pdfFiles && pdfFiles.length > 0
+                            zipFile
                                 ? 'border-green-500/50 bg-green-500/10' 
                                 : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
                         }`}>
                             <input
                                 type="file"
-                                /* @ts-ignore */
-                                webkitdirectory=""
-                                directory=""
-                                multiple
-                                accept=".pdf"
-                                onChange={handlePdfFolderChange}
+                                accept=".zip"
+                                onChange={handleZipFileChange}
                                 className="hidden"
                             />
-                            {pdfFiles && pdfFiles.length > 0 ? (
+                            {zipFile ? (
                                 <div>
-                                    <p className="text-green-400 font-semibold text-lg">✓ {pdfFiles.length} PDF files selected</p>
-                                    <p className="text-white/60 text-sm mt-2">Click to select a different folder</p>
+                                    <p className="text-green-400 font-semibold text-lg">✓ {zipFile.name}</p>
+                                    <p className="text-white/60 text-sm mt-2">Click to select a different ZIP file</p>
                                 </div>
                             ) : (
                                 <div>
-                                    <p className="text-white/80 font-semibold text-lg">Click to select PDF folder</p>
-                                    <p className="text-white/60 text-sm mt-2">All PDFs in the folder will be sorted</p>
+                                    <p className="text-white/80 font-semibold text-lg">Click to upload ZIP file</p>
+                                    <p className="text-white/60 text-sm mt-2">The ZIP file must contain all PDFs to be sorted</p>
                                 </div>
                             )}
                         </div>
@@ -144,14 +136,14 @@ const Sorting: React.FC = () => {
                 <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4">
                     <button
                         onClick={handleSort}
-                        disabled={!masterFile || !pdfFiles || pdfFiles.length === 0 || loading}
+                        disabled={!masterFile || !zipFile || loading}
                         className="w-full bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? "Processing..." : "Sort PDFs"}
                     </button>
-                    {(!masterFile || !pdfFiles || pdfFiles.length === 0) && (
+                    {(!masterFile || !zipFile) && (
                         <p className="text-white/60 text-xs text-center mt-2">
-                            {!masterFile ? "Please upload a master file" : "Please select a folder with PDF files"}
+                            {!masterFile ? "Please upload a master file" : "Please upload a ZIP file containing PDFs"}
                         </p>
                     )}
                 </div>
