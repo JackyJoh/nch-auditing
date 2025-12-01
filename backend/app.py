@@ -375,7 +375,6 @@ def append_care_gaps():
         merged_file_bytes = base64.b64decode(result['merged_file'])
 
         # Add merging process to history in mongo
-        
         if db is not None:
             try:
                 collection = db.history
@@ -425,14 +424,29 @@ def convert_contacts_to_vcf():
         contact_file = request.files.get('contactSheet')
         if not contact_file:
             return jsonify({"message": "Contact sheet file is required."}), 400
-        
+
         name_column = request.form.get('nameColumn')
         number_column = request.form.get('numberColumn')
-        
+
         if not name_column or not number_column:
             return jsonify({"message": "Name column and number column are required."}), 400
-        
-        vcf_response = to_vcf(contact_file, name_column, number_column)
+
+        # Debug/log incoming request details
+        print(f"[CONTACTS] Received file: {getattr(contact_file, 'filename', None)}")
+        print(f"[CONTACTS] nameColumn='{name_column}', numberColumn='{number_column}'")
+
+        try:
+            vcf_response = to_vcf(contact_file, name_column, number_column)
+        except Exception as e:
+            # Log traceback for debugging
+            import traceback
+            tb = traceback.format_exc()
+            print(f"[CONTACTS] to_vcf() raised an exception:\n{tb}")
+            # Return detailed error only in debug mode
+            if DEBUG_MODE:
+                return jsonify({"message": "VCF conversion failed", "error": str(e), "trace": tb}), 500
+            return jsonify({"message": "VCF conversion failed", "error": str(e)}), 500
+
         # Add contact process to history in mongo
         if db is not None:
             try:
@@ -446,7 +460,8 @@ def convert_contacts_to_vcf():
                 })
             except Exception as e:
                 if DEBUG_MODE:
-                    print(f"Error saving history: {e}")
+                    print(f"[CONTACTS] Error saving history: {e}")
+
         return vcf_response
 
     except Exception as e:
@@ -463,7 +478,14 @@ def convert_contacts_to_vcf():
                 })
             except Exception as hist_error:
                 if DEBUG_MODE:
-                    print(f"Error saving history: {hist_error}")
+                    print(f"[CONTACTS] Error saving history: {hist_error}")
+
+        # Log and return error (include traceback in DEBUG_MODE)
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[CONTACTS] Exception in convert_contacts_to_vcf: {tb}")
+        if DEBUG_MODE:
+            return jsonify({"message": "VCF conversion failed.", "error": str(e), "trace": tb}), 500
         return jsonify({"message": "VCF conversion failed."}), 500
     
 # Route for sorting PDFs

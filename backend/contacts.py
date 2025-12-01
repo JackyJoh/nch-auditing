@@ -1,6 +1,7 @@
 import csv
 from io import BytesIO
 from flask import send_file
+import pandas as pd
 
 def create_vcard_block(name, phone_number):
    
@@ -37,9 +38,21 @@ def to_vcf(file_obj, name_column, number_column):
     Returns: Flask response to download VCF file
     """
     try:
-        # Read CSV from file-like object
-        file_obj.seek(0)
-        decoded = file_obj.read().decode('utf-8')
+        # Check if CSV or XLSX
+        filename = getattr(file_obj, 'filename', '')
+        if not filename.endswith('.csv'):
+            # Read in XLSX and convert to CSV in-memory
+            excel_bytes = file_obj.read()
+            excel_io = BytesIO(excel_bytes)
+            df = pd.read_excel(excel_io)
+            csv_io = BytesIO()
+            df.to_csv(csv_io, index=False)
+            csv_io.seek(0)
+            decoded = csv_io.read().decode('utf-8')
+        else:
+            # Read CSV from file-like object
+            file_obj.seek(0)
+            decoded = file_obj.read().decode('utf-8')
         reader = csv.DictReader(decoded.splitlines())
         vcf_lines = []
         contact_count = 0

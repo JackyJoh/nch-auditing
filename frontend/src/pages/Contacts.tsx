@@ -1,26 +1,26 @@
 import React, { useState } from 'react';
 import Layout from '../Layout';
 
-const Contacts: React.FC = () => {
+const Contacts = () => {
     const [file, setFile] = useState<File | null>(null);
     const [contactHeader, setContactHeader] = useState('');
     const [phoneHeader, setPhoneHeader] = useState('');
+    const [loading, setLoading] = useState(false);
 
     // Example handler for backend call
     const handleGenerateVCF = async () => {
         if (!file || !contactHeader || !phoneHeader) return;
+        setLoading(true);
         const formData = new FormData();
         formData.append('contactSheet', file);
-        formData.append('nameColumn', contactHeader); // <-- match backend
-        formData.append('numberColumn', phoneHeader); // <-- match backend
-
-        // Backend call to generate VCF
+        formData.append('nameColumn', contactHeader);
+        formData.append('numberColumn', phoneHeader);
         try {
             const response = await fetch('/api/contacts', {
                 method: 'POST',
                 body: formData,
             });
-            // Optionally handle download here if backend returns file directly
+
             if (response.ok) {
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
@@ -31,9 +31,25 @@ const Contacts: React.FC = () => {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
+                window.alert('VCF generated successfully.');
+            } else {
+                // Try parse JSON error message, else show generic text
+                let errText = 'Failed to generate VCF';
+                try {
+                    const errJson = await response.json();
+                    errText = errJson.message || JSON.stringify(errJson);
+                } catch {
+                    try {
+                        errText = await response.text();
+                    } catch {}
+                }
+                window.alert(`Error: ${errText}`);
             }
-        } catch (error) {
-            console.error("Error generating VCF:", error);
+        } catch (error: any) {
+            console.error('Error generating VCF:', error);
+            window.alert(`Error generating VCF: ${error?.message || String(error)}`);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -120,10 +136,10 @@ const Contacts: React.FC = () => {
                         <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 mt-4 w-full flex flex-col items-center">
                             <button
                                 className="w-full bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={!file || !contactHeader || !phoneHeader}
+                                disabled={!file || !contactHeader || !phoneHeader || loading}
                                 onClick={handleGenerateVCF}
                             >
-                                Generate VCF File
+                                {loading ? 'Processing...' : 'Generate VCF File'}
                             </button>
                             {!file && (
                                 <span className="text-white/60 text-xs text-center mt-2">

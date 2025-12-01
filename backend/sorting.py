@@ -216,20 +216,17 @@ def lambda_handler(event, context):
         pdf_files = []
         for pdf in pdf_files_data:
             pdf_obj = BytesIO()
-            # pdf['s3_key'] contains the path to the individual PDF
             s3_client.download_fileobj(s3_bucket, pdf['s3_key'], pdf_obj)
             pdf_obj.seek(0)
             # Store file bytes and original filename in the custom FileObj class
             pdf_files.append(FileObj(pdf_obj.getvalue(), pdf['filename']))
             
-        # 3. Process the files (the heavy lifting)
+        # 3. Process the files
         sorted_zip_bytes = sort_pdfs(master_file, pdf_files)
 
         # 4. Upload the final ZIP to S3
         result_s3_key = f"results/sorted_pdfs_{datetime.now().strftime('%Y%m%dT%H%M%S')}.zip"
         zip_obj = BytesIO(sorted_zip_bytes)
-        
-        # Upload the ZIP file to S3
         s3_client.upload_fileobj(zip_obj, s3_bucket, result_s3_key)
 
         # 5. Return success status and the S3 key
