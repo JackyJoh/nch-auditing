@@ -720,6 +720,11 @@ def login():
 def health():
     return jsonify({"status": "ok", "message": "Backend is running"}), 200
 
+# Test endpoint to verify deployment
+@app.route('/api/test-contact-route', methods=['GET'])
+def test_contact_route():
+    return jsonify({"message": "Contact route endpoint exists", "status": "ok"}), 200
+
 def clean_nans(obj):
     if isinstance(obj, dict):
         return {k: clean_nans(v) for k, v in obj.items()}

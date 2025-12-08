@@ -7,6 +7,9 @@ const Contacts = () => {
     const [phoneHeader, setPhoneHeader] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Get API base URL from environment variable, fallback to empty string for local development
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
+
     // Example handler for backend call
     const handleGenerateVCF = async () => {
         if (!file || !contactHeader || !phoneHeader) return;
@@ -16,8 +19,11 @@ const Contacts = () => {
         formData.append('nameColumn', contactHeader);
         formData.append('numberColumn', phoneHeader);
         try {
-            const response = await fetch('/api/contact-list', {
+            const response = await fetch(`${API_BASE_URL}/api/contact-list`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || 'authenticated'}`,
+                },
                 body: formData,
             });
 
