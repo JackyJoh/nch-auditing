@@ -369,7 +369,12 @@ def append_care_gaps():
         )
         result = json.loads(response['Payload'].read())
 
+        # Debug: Print Lambda response if there's an error
         if result.get('status') != 'success' or 'merged_file' not in result:
+            print(f"[APPEND-GAPS] Lambda error response: {json.dumps(result, indent=2)}")
+            if DEBUG_MODE:
+                import traceback
+                traceback.print_exc()
             return jsonify({"message": result.get('error', 'Merging failed.')}), 500
 
         merged_file_bytes = base64.b64decode(result['merged_file'])
@@ -399,6 +404,12 @@ def append_care_gaps():
         )
         
     except Exception as e:
+        # Debug: Print exception details
+        print(f"[APPEND-GAPS] Exception in append_care_gaps: {str(e)}")
+        if DEBUG_MODE:
+            import traceback
+            traceback.print_exc()
+        
         # Add failed status to history in mongo
         if db is not None:
             try:
