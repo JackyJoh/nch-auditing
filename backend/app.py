@@ -417,7 +417,7 @@ def append_care_gaps():
         return jsonify({"message": "Merging failed."}), 500
     
 # Route for converting contacts to VCF
-@app.route('/api/contacts', methods=['POST'])
+@app.route('/api/contact-list', methods=['POST'])
 @require_auth
 def convert_contacts_to_vcf():
     try:

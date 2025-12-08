@@ -16,7 +16,7 @@ const Contacts = () => {
         formData.append('nameColumn', contactHeader);
         formData.append('numberColumn', phoneHeader);
         try {
-            const response = await fetch('/api/contacts', {
+            const response = await fetch('/api/contact-list', {
                 method: 'POST',
                 body: formData,
             });
