@@ -6,7 +6,7 @@ import os
 from pymongo import MongoClient
 from bson import ObjectId
 from sorting import sort_pdfs
-from contacts import to_vcf
+from contacts import generate_vcf_content
 from functools import wraps
 import jwt
 from pytz import timezone as pytz_timezone
@@ -446,17 +446,36 @@ def convert_contacts_to_vcf():
         print(f"[CONTACTS] Received file: {getattr(contact_file, 'filename', None)}")
         print(f"[CONTACTS] nameColumn='{name_column}', numberColumn='{number_column}'")
 
-        try:
-            vcf_response = to_vcf(contact_file, name_column, number_column)
-        except Exception as e:
-            # Log traceback for debugging
-            import traceback
-            tb = traceback.format_exc()
-            print(f"[CONTACTS] to_vcf() raised an exception:\n{tb}")
-            # Return detailed error only in debug mode
-            if DEBUG_MODE:
-                return jsonify({"message": "VCF conversion failed", "error": str(e), "trace": tb}), 500
-            return jsonify({"message": "VCF conversion failed", "error": str(e)}), 500
+        # Prepare lambda payload
+        lambda_payload = {
+            "file_content": base64.b64encode(contact_file.read()).decode(),
+            "filename": contact_file.filename,
+            "name_column": name_column,
+            "number_column": number_column
+        }
+        
+        # Call Lambda
+        lambda_client = boto3.client(
+            'lambda',
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_REGION")
+        )
+        response = lambda_client.invoke(
+            FunctionName='generateVCF',
+            Payload=json.dumps(lambda_payload)
+        )
+
+        result = json.loads(response['Payload'].read())
+        
+        # Check for Lambda errors
+        if result.get('statusCode') != 200:
+            error_body = json.loads(result.get('body', '{}')) if isinstance(result.get('body'), str) else result.get('body', {})
+            print(f"[CONTACTS] Lambda error response: {json.dumps(result, indent=2)}")
+            return jsonify({"message": error_body.get('error', 'VCF conversion failed.')}), 500
+
+        # Decode the VCF file from base64
+        vcf_bytes = base64.b64decode(result['body'])
 
         # Add contact process to history in mongo
         if db is not None:
@@ -473,8 +492,14 @@ def convert_contacts_to_vcf():
                 if DEBUG_MODE:
                     print(f"[CONTACTS] Error saving history: {e}")
 
-        return vcf_response
-
+        # Send the VCF file back as a download
+        return send_file(
+            BytesIO(vcf_bytes),
+            mimetype='text/vcard',
+            as_attachment=True,
+            download_name='contacts.vcf'
+        )
+        
     except Exception as e:
         # Add failed status to history in mongo
         if db is not None:
