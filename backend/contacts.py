@@ -57,7 +57,7 @@ def generate_vcf_content(file_obj, name_column, number_column):
         else:
             # Handle Excel files
             try:
-                df = pd.read_excel(BytesIO(file_content), engine='openpyxl')
+                df = pd.read_excel(BytesIO(file_content), engine='openpyxl', dtype =str)
                 csv_io = StringIO()
                 df.to_csv(csv_io, index=False)
                 csv_io.seek(0)
