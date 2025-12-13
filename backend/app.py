@@ -118,13 +118,40 @@ def submit_json_to_mongo():
         data_payload['created_at'] = datetime.now(timezone.utc)  # FIXED
         
         result = collection.insert_one(data_payload)
-            
+        # Add creation process to history in mongo
+        if db is not None:
+            try:
+                collection_history = db.history
+                collection_history.insert_one({
+                    "type": "add_config",
+                    "description": f"Added insurance config {data_payload.get('name', 'Unknown')}",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "success"
+                })
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {e}")
         return jsonify({
             "message": "Configuration added successfully.",
             "id": str(result.inserted_id)  # Changed to 'id' for consistency
         }), 201
 
     except Exception as e:
+        # Add failed status to history in mongo
+        if db is not None:
+            try:
+                collection_history = db.history
+                collection_history.insert_one({
+                    "type": "add_config",
+                    "description": f"Failed to add insurance config {data_payload.get('name', 'Unknown')}",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "error"
+                })
+            except Exception as hist_error:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {hist_error}")
         return jsonify({"message": "MongoDB insertion failed.", "error": str(e)}), 500
 
 # Route for retrieving insurance configurations
@@ -164,10 +191,42 @@ def edit_insurance_config(config_id):
 
         if result.matched_count == 0:
             return jsonify({"message": "Configuration not found."}), 404
+        
+        # Get name of insurance config for history
+        config = collection.find_one({"_id": ObjectId(config_id)})
+        config_name = config.get("name", "Unknown")
 
+        # Add updated configuration process to history in mongo
+        if db is not None:
+            try:
+                collection_history = db.history
+                collection_history.insert_one({
+                    "type": "edit_config",
+                    "description": f"Edited insurance config {config_name}",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "success"
+                })
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {e}")
         return jsonify({"message": "Configuration updated successfully."}), 200
 
     except Exception as e:
+        # Add failed status to history in mongo
+        if db is not None:
+            try:
+                collection_history = db.history
+                collection_history.insert_one({
+                    "type": "edit_config",
+                    "description": f"Failed to edit insurance config {config_name}",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "error"
+                })
+            except Exception as hist_error:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {hist_error}")
         return jsonify({"message": "MongoDB update failed.", "error": str(e)}), 500
     
 # Route for deleting insurance configurations
@@ -178,15 +237,47 @@ def delete_insurance_config(config_id):
         return jsonify({"message": "Database connection is down."}), 503
 
     try:
+
+        # Delete and get name of config        
         collection = db.insurance
+        config = collection.find_one({"_id": ObjectId(config_id)})
+        config_name = config.get("name", "Unknown")
         result = collection.delete_one({"_id": ObjectId(config_id)})
 
         if result.deleted_count == 0:
             return jsonify({"message": "Configuration not found."}), 404
 
+        # Add deletion process to history in mongo
+        if db is not None:
+            try:
+                collection_history = db.history
+                collection_history.insert_one({
+                    "type": "delete_config",
+                    "description": f"Deleted insurance config {config_name}",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "success"
+                })
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {e}")
         return jsonify({"message": "Configuration deleted successfully."}), 200
 
     except Exception as e:
+        # Add failed status to history in mongo
+        if db is not None:
+            try:
+                collection_history = db.history
+                collection_history.insert_one({
+                    "type": "delete_config",
+                    "description": f"Failed to delete insurance config {config_name}",
+                    "timestamp": get_localized_now().isoformat(),
+                    "user": "Admin",
+                    "status": "error"
+                })
+            except Exception as hist_error:
+                if DEBUG_MODE:
+                    print(f"Error saving history: {hist_error}")
         return jsonify({"message": "MongoDB deletion failed.", "error": str(e)}), 500
 
 # Route for uploading gaps file (one-time setup)
@@ -698,6 +789,13 @@ def get_history():
     try:
         db_collection = db.history
         history_records = list(db_collection.find().sort("timestamp", -1))
+
+        # Only show last month of history
+        one_month_ago = get_localized_now() - timedelta(days=30)
+        history_records = [record for record in history_records if 'timestamp' in record and datetime.fromisoformat(record['timestamp']) >= one_month_ago]
+        # Delete all records older than one month
+        db_collection.delete_many({"timestamp": {"$lt": one_month_ago.isoformat()}})
+
         for record in history_records:
             record['_id'] = str(record['_id'])  # Convert ObjectId to string
             if 'timestamp' in record and isinstance(record['timestamp'], datetime):

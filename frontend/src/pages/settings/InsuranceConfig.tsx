@@ -29,7 +29,6 @@ const InsuranceConfig: React.FC = () => {
     // Fetch configs on component mount
     useEffect(() => {
         fetchConfigs();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Fetch all configurations from backend
@@ -81,9 +80,14 @@ const InsuranceConfig: React.FC = () => {
             return;
         }
 
+        // Normalize blank fields to 'None'
+        const normalizedFields = Object.fromEntries(
+            Object.entries(fieldMappings).map(([key, val]) => [key, (val ?? '').trim() === '' ? 'None' : val])
+        );
+
         const configData = {
             name: configName,
-            fields: { ...fieldMappings }
+            fields: normalizedFields
         };
 
         setLoading(true);
@@ -291,7 +295,7 @@ const InsuranceConfig: React.FC = () => {
                                         <div className="grid grid-cols-5 gap-2 text-sm">
                                             {Object.entries(config.fields).map(([label, value]) => (
                                                 <div key={label} className="text-white/60">
-                                                    <span className="font-medium">{label}:</span> {value || "N/A"}
+                                                    <span className="font-medium">{label}:</span> {value || "None"}
                                                 </div>
                                             ))}
                                         </div>

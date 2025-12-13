@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 interface ActivityItem {
     id: string;
-    type: 'append_gaps' | 'sort' | 'upload_gaps' | 'edit_insurance' | 'contacts_vcf' | 'other';
+    type: 'append_gaps' | 'sort' | 'upload_gaps' | 'edit_insurance' | 'contacts_vcf' | 'edit_config' | 'delete_config' | 'add_config' | 'other';
     description: string;
     timestamp: string;
     user?: string;
@@ -41,7 +41,6 @@ const Settings: React.FC = () => {
             console.error("Error fetching history:", error);
         });
 
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchGapsFileInfo = async () => {
@@ -150,6 +149,32 @@ const Settings: React.FC = () => {
                 return (
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M22 16.92v2.08a2 2 0 01-2.18 2A19.86 19.86 0 013 5.18 2 2 0 015 3h2.09a2 2 0 012 1.72c.13.81.36 1.6.7 2.34a2 2 0 01-.45 2.11l-1.27 1.27a16 16 0 006.58 6.58l1.27-1.27a2 2 0 012.11-.45c.74.34 1.53.57 2.34.7a2 2 0 011.72 2z"/>
+                    </svg>
+                );
+            case 'edit_config':
+                // Gear/settings icon
+                return (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.89 3.31.877 2.42 2.42a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.89 1.543-.877 3.31-2.42 2.42a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.89-3.31-.877-2.42-2.42a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.89-1.543.877-3.31 2.42-2.42.997.575 2.254.117 2.573-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                );
+            case 'delete_config':
+                // Trash can icon
+                return (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V5h6v2" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
+                    </svg>
+                );
+            case 'add_config':
+                // Plus icon
+                return (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12M6 12h12" />
                     </svg>
                 );
             default:
