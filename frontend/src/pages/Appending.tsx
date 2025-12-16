@@ -11,6 +11,7 @@ interface FileUpload {
     configId: string;
     configName: string;
     file: File | null;
+    notesHeader: string;
 }
 
 const Appending: React.FC = () => {
@@ -37,7 +38,8 @@ const Appending: React.FC = () => {
             return existingUpload || {
                 configId,
                 configName: config?.name || '',
-                file: null
+                file: null,
+                notesHeader: ''
             };
         });
         setFileUploads(newUploads);
@@ -86,6 +88,16 @@ const Appending: React.FC = () => {
         );
     };
 
+    const handleNotesHeaderChange = (configId: string, notesHeader: string) => {
+        setFileUploads(prev => 
+            prev.map(upload => 
+                upload.configId === configId 
+                    ? { ...upload, notesHeader }
+                    : upload
+            )
+        );
+    };
+
     const handleAppend = async () => {
         if (!masterFile || fileUploads.length === 0 || fileUploads.some(u => !u.file)) {
             alert("Please upload all required files");
@@ -107,11 +119,15 @@ const Appending: React.FC = () => {
 
             formData.append('enableToBeRemoved', enableToBeRemoved ? 'true' : 'false');
             
-            // Add care gap sheets with their config IDs
+            // Add care gap sheets with their config IDs and optional notes headers
             fileUploads.forEach((upload, index) => {
                 if (upload.file) {
                     formData.append(`careSheet_${index}`, upload.file);
                     formData.append(`configId_${index}`, upload.configId);
+                    // Send notesHeader if it's not empty (to override MongoDB value)
+                    if (upload.notesHeader.trim()) {
+                        formData.append(`notesHeader_${index}`, upload.notesHeader);
+                    }
                 }
             });
             
@@ -260,33 +276,53 @@ const Appending: React.FC = () => {
                             <div className={`grid gap-3 ${fileUploads.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                 {fileUploads.map(upload => (
                                     <div key={upload.configId} className="bg-slate-800/60 border border-slate-600/50 rounded-lg p-3">
-                                        <h3 className="text-white font-semibold text-base mb-2">{upload.configName}</h3>
+                                        <h3 className="text-white font-semibold text-base mb-3">{upload.configName}</h3>
                                         
-                                        <label className="cursor-pointer block">
-                                            <div className={`border-2 border-dashed rounded-lg p-3 text-center transition-all duration-200 ${
-                                                upload.file 
-                                                    ? 'border-green-500/50 bg-green-500/10' 
-                                                    : 'border-slate-500/50 bg-slate-700/50 hover:border-indigo-500/50'
-                                            }`}>
-                                                <input
-                                                    type="file"
-                                                    accept=".xlsx,.xls,.csv"
-                                                    onChange={(e) => handleFileChange(upload.configId, e.target.files?.[0] || null)}
-                                                    className="hidden"
-                                                />
-                                                {upload.file ? (
-                                                    <div>
-                                                        <p className="text-green-400 font-semibold text-sm">✓ {upload.file.name}</p>
-                                                        <p className="text-white/60 text-xs mt-1">Click to change file</p>
+                                        {/* Two Column Layout */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {/* Left Column - File Upload */}
+                                            <div>
+                                                <label className="cursor-pointer block">
+                                                    <div className={`border-2 border-dashed rounded-lg p-3 text-center transition-all duration-200 ${
+                                                        upload.file 
+                                                            ? 'border-green-500/50 bg-green-500/10' 
+                                                            : 'border-slate-500/50 bg-slate-700/50 hover:border-indigo-500/50'
+                                                    }`}>
+                                                        <input
+                                                            type="file"
+                                                            accept=".xlsx,.xls,.csv"
+                                                            onChange={(e) => handleFileChange(upload.configId, e.target.files?.[0] || null)}
+                                                            className="hidden"
+                                                        />
+                                                        {upload.file ? (
+                                                            <div>
+                                                                <p className="text-green-400 font-semibold text-sm">✓ {upload.file.name}</p>
+                                                                <p className="text-white/60 text-xs mt-1">Click to change file</p>
+                                                            </div>
+                                                        ) : (
+                                                            <div>
+                                                                <p className="text-white/80 text-sm">Click to upload file</p>
+                                                                <p className="text-white/60 text-xs mt-1">Excel or CSV files</p>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                ) : (
-                                                    <div>
-                                                        <p className="text-white/80 text-sm">Click to upload file</p>
-                                                        <p className="text-white/60 text-xs mt-1">Excel or CSV files</p>
-                                                    </div>
-                                                )}
+                                                </label>
                                             </div>
-                                        </label>
+
+                                            {/* Right Column - Settings */}
+                                            <div>
+                                                <label className="block">
+                                                    <span className="text-white/80 text-sm font-medium mb-1 block">Notes Header</span>
+                                                    <input
+                                                        type="text"
+                                                        value={upload.notesHeader}
+                                                        onChange={(e) => handleNotesHeaderChange(upload.configId, e.target.value)}
+                                                        placeholder="Enter notes header"
+                                                        className="w-full bg-slate-700/50 border border-slate-600/50 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 placeholder-white/40"
+                                                    />
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

@@ -407,14 +407,16 @@ def append_care_gaps():
         while True:
             file_key = f'careSheet_{file_index}'
             config_key = f'configId_{file_index}'
+            notes_header_key = f'notesHeader_{file_index}'
             
             care_file = request.files.get(file_key)
             config_id = request.form.get(config_key)
+            notes_header = request.form.get(notes_header_key)
             
             if not care_file or not config_id:
                 break
                 
-            care_gap_files_with_configs.append((care_file, config_id))
+            care_gap_files_with_configs.append((care_file, config_id, notes_header))
             file_index += 1
         
         if len(care_gap_files_with_configs) == 0:
@@ -423,14 +425,22 @@ def append_care_gaps():
 
         # Prepare care_gap_files for Lambda
         care_gap_files_payload = []
-        for f, config_id in care_gap_files_with_configs:
+        for f, config_id, notes_header in care_gap_files_with_configs:
             config = db.insurance.find_one({"_id": ObjectId(config_id)})
             if not config:
                 return jsonify({"message": f"Config not found for ID {config_id}"}), 400
+            
+            # Get config fields from MongoDB
+            config_fields = config['fields'].copy()
+            
+            # Override Notes field if notesHeader is provided from frontend
+            if notes_header:
+                config_fields['Notes'] = notes_header
+            
             care_gap_files_payload.append({
                 "file": base64.b64encode(f.read()).decode(),
                 "filename": f.filename,
-                "config_fields": config['fields']
+                "config_fields": config_fields
             })
 
         # Prepare NAME mapping data for Lambda
