@@ -317,7 +317,7 @@ const Appending: React.FC = () => {
                                                         type="text"
                                                         value={upload.notesHeader}
                                                         onChange={(e) => handleNotesHeaderChange(upload.configId, e.target.value)}
-                                                        placeholder="Enter notes header"
+                                                        placeholder="None (use default)"
                                                         className="w-full bg-slate-700/50 border border-slate-600/50 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 placeholder-white/40"
                                                     />
                                                 </label>

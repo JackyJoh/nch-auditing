@@ -203,6 +203,23 @@ const Settings: React.FC = () => {
 
     return (
         <Layout>
+            <style>{`
+                .history-scrollbar::-webkit-scrollbar {
+                    width: 30px;
+                }
+                .history-scrollbar::-webkit-scrollbar-track {
+                    background: rgb(51 65 85 / 0.3);
+                    border-radius: 20px;
+                }
+                .history-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgb(148 163 184);
+                    border-radius: 20px;
+                    border: 3px solid rgb(51 65 85 / 0.3);
+                }
+                .history-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: rgb(203 213 225);
+                }
+            `}</style>
             <div className="p-4 h-full flex flex-col">
                 {/* Header Section */}
                 <div className="mb-6">
@@ -271,7 +288,10 @@ const Settings: React.FC = () => {
                 {/* History Section */}
                 <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-6 overflow-hidden flex flex-col">
                     <h3 className="text-white text-2xl font-bold mb-4">Recent Activity</h3>
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto pr-2 history-scrollbar" style={{
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: 'rgb(148 163 184) rgb(51 65 85 / 0.3)'
+                    }}>
                         {history.length === 0 ? (
                             <div className="text-white/50 text-center py-12">
                                 <p>No recent activity to display</p>    
