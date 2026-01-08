@@ -37,7 +37,7 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-8">
+        <div className="min-h-screen w-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center p-8">
             <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-2xl p-8 flex flex-col justify-center font-mono"
                  style={{ width: '450px', height: '600px' }}>
 
@@ -70,6 +70,9 @@ const Login: React.FC = () => {
                         {loading ? 'Logging in...' : 'Login'}
                     </button>
                 </form>
+            </div>
+            <div className="text-center text-white/60 text-sm py-4 mt-6">
+                © {new Date().getFullYear()} Naples Comprehensive Health. All rights reserved.
             </div>
         </div>
     );  

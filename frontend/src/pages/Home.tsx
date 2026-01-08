@@ -8,8 +8,8 @@ const Home: React.FC = () => {
 
   return (
     <Layout>
-      <div className="p-4 flex items-center justify-center h-full">
-        <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full w-full">
+      <div className="p-4 flex flex-col items-center justify-center h-full">
+        <div className="grid grid-cols-2 grid-rows-2 gap-4 flex-1 w-full">
           {/* Top left */}
           <div 
             className="flex flex-col gap-4 flex-1 row-start-1 col-start-1"
@@ -70,6 +70,9 @@ const Home: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+        <div className="text-center text-white/60 text-sm py-4">
+          © {new Date().getFullYear()} Naples Comprehensive Health. All rights reserved.
         </div>
       </div>
     </Layout>
