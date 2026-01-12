@@ -18,30 +18,16 @@ const Settings: React.FC = () => {
     const [gapsFileInfo, setGapsFileInfo] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<ActivityItem[]>([]);
+    const [filterType, setFilterType] = useState<string>('all');
+    const [filterDate, setFilterDate] = useState<string>('all');
 
     useEffect(() => {
         fetchGapsFileInfo();
-        // Fetch history
-        fetch(`${API_BASE_URL}/api/history`, {
-            credentials: 'include',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error('Failed to fetch history');
-        })
-        .then(data => {
-            setHistory(data);
-        })
-        .catch(error => {
-            console.error("Error fetching history:", error);
-        });
-
     }, []);
+
+    useEffect(() => {
+        fetchHistory()
+    }, [filterDate, filterType]);
 
     const fetchGapsFileInfo = async () => {
         try {
@@ -72,6 +58,31 @@ const Settings: React.FC = () => {
             console.error("Error fetching gaps file info:", error);
         }
     };
+
+    const fetchHistory = async () => {
+        // Fetch history
+        console.log('Fetching history with filters:', { filterType, filterDate });
+        fetch(`${API_BASE_URL}/api/history`, {
+            credentials: 'include',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'X-Filter-Type' : filterType,
+                'X-Filter-Date' : filterDate
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Failed to fetch history');
+        })
+        .then(data => {
+            setHistory(data);
+        })
+        .catch(error => {
+            console.error("Error fetching history:", error);
+        });
+    }
 
     const handleGapsFileUpload = async () => {
         if (!gapsFile) {
@@ -287,7 +298,46 @@ const Settings: React.FC = () => {
 
                 {/* History Section */}
                 <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-6 overflow-hidden flex flex-col">
-                    <h3 className="text-white text-2xl font-bold mb-4">Recent Activity</h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-white text-2xl font-bold">Recent Activity</h3>
+                        <div className="flex items-center gap-3">
+                            {/* Type Filter */}
+                            <div className="flex items-center gap-2">
+                                <label className="text-white/70 text-sm font-medium">Type:</label>
+                                <select
+                                    value={filterType}
+                                    onChange={(e) => setFilterType(e.target.value)}
+                                    className="bg-slate-800/70 border border-slate-600/50 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                                >
+                                    <option value="all">All Types</option>
+                                    <option value="append_gaps">Append Gaps</option>
+                                    <option value="sort">Sort PDFs</option>
+                                    <option value="upload_gaps">Upload Gaps</option>
+                                    <option value="contacts_vcf">Generate VCF</option>
+                                    <option value="edit_config">Edit Config</option>
+                                    <option value="delete_config">Delete Config</option>
+                                    <option value="add_config">Add Config</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            {/* Date Filter */}
+                            <div className="flex items-center gap-2">
+                                <label className="text-white/70 text-sm font-medium">Date:</label>
+                                <select
+                                    value={filterDate}
+                                    onChange={(e) => setFilterDate(e.target.value)}
+                                    className="bg-slate-800/70 border border-slate-600/50 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                                >
+                                    <option value="all">All Time</option>
+                                    <option value="today">Today</option>
+                                    <option value="week">Last 7 Days</option>
+                                    <option value="month">Last 30 Days</option>
+                                    <option value="quarter">Last 3 Months</option>
+                                    <option value="year">Last Year</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                     <div className="flex-1 overflow-y-auto pr-2 history-scrollbar" style={{
                         scrollbarWidth: 'thin',
                         scrollbarColor: 'rgb(148 163 184) rgb(51 65 85 / 0.3)'

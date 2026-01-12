@@ -24,8 +24,8 @@ app = Flask(__name__)
 # Configure CORS to allow credentials
 CORS(app, 
      supports_credentials=True,
-     resources={r"/*": {"origins": "*"}},  # ⚠️ ALLOWS ALL ORIGINS - SECURITY RISK
-     allow_headers=["Content-Type", "Authorization"],
+     resources={r"/*": {"origins": "*"}},  #ALLOWS ALL ORIGINS - SECURITY RISK
+     allow_headers=["Content-Type", "Authorization", "X-Filter-Type", "X-Filter-Date"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Establish MongoDB connection
@@ -790,7 +790,7 @@ def sort_pdfs_route():
             traceback.print_exc()
         return jsonify({"message": "Sorting failed."}), 500
 
-# Route for retrieving all history
+# Route for retrieving all history (recent activity)
 @app.route('/api/history', methods=['GET'])
 @require_auth
 def get_history():
@@ -800,11 +800,90 @@ def get_history():
         db_collection = db.history
         history_records = list(db_collection.find().sort("timestamp", -1))
 
-        # Only show last month of history
-        one_month_ago = get_localized_now() - timedelta(days=30)
-        history_records = [record for record in history_records if 'timestamp' in record and datetime.fromisoformat(record['timestamp']) >= one_month_ago]
-        # Delete all records older than one month
-        db_collection.delete_many({"timestamp": {"$lt": one_month_ago.isoformat()}})
+        type = request.headers.get('X-Filter-Type', 'all')
+        dateRange = request.headers.get('X-Filter-Date', 'all')
+        
+        print(f"[HISTORY DEBUG] Received filters - Type: '{type}', DateRange: '{dateRange}'")
+        
+        # Filter records by date range
+        now = get_localized_now()
+        one_year_ago = now - timedelta(days=365)
+        
+        print(f"[HISTORY DEBUG] Current time (now): {now}")
+        
+        # Delete all records older than one year
+        db_collection.delete_many({"timestamp": {"$lt": one_year_ago.isoformat()}})
+
+        history_records = [record for record in history_records if 'timestamp' in record]
+        
+        print(f"[HISTORY DEBUG] Total records: {len(history_records)}")
+        for i, rec in enumerate(history_records[:3]):  # Print first 3
+            print(f"[HISTORY DEBUG] Record {i}: timestamp='{rec.get('timestamp')}', type='{rec.get('type')}'")
+        
+        # Helper function to parse timestamp safely and normalize timezone
+        def parse_timestamp(ts_str):
+            try:
+                # Parse the ISO string with timezone (e.g., "2025-12-15T17:40:07.484965-05:00")
+                dt = datetime.fromisoformat(ts_str)
+                
+                # Convert to local timezone if both have timezone info
+                if dt.tzinfo is not None and now.tzinfo is not None:
+                    # Convert the parsed timestamp to the server's local timezone
+                    dt = dt.astimezone(now.tzinfo)
+                
+                # Now strip timezone for comparison (both will be in same timezone)
+                if dt.tzinfo is not None:
+                    dt = dt.replace(tzinfo=None)
+                    
+                return dt
+            except Exception as e:
+                print(f"[HISTORY DEBUG] Error parsing timestamp '{ts_str}': {e}")
+                return None
+        
+        # Helper function to filter records by date range
+        def filter_records(history_records, dateRange, now):
+            # Strip timezone from now for consistent comparison (after timezone conversions are done)
+            now_naive = now.replace(tzinfo=None)
+            
+            # Calculate the threshold based on the range
+            if dateRange == 'today':
+                threshold = now_naive.replace(hour=0, minute=0, second=0, microsecond=0)
+            elif dateRange == 'week':
+                threshold = now_naive - timedelta(days=7)
+            elif dateRange == 'month':
+                threshold = now_naive - timedelta(days=30)
+            elif dateRange == 'quarter':
+                threshold = now_naive - timedelta(days=90)
+            elif dateRange == 'year':
+                threshold = now_naive - timedelta(days=365)
+            else:
+                print(f"[HISTORY DEBUG] No filtering applied (dateRange={dateRange})")
+                return history_records  # 'all' or default
+
+            print(f"[HISTORY DEBUG] Threshold for '{dateRange}': {threshold} (now: {now_naive})")
+            
+            filtered = []
+            for r in history_records:
+                record_dt = parse_timestamp(r['timestamp'])
+                
+                if record_dt:
+                    is_included = record_dt >= threshold
+                    print(f"[HISTORY DEBUG] Record dt: {record_dt} >= {threshold}? {is_included}")
+                    
+                    # Check if record_dt is valid AND compare
+                    if is_included:
+                        filtered.append(r)
+            
+            print(f"[HISTORY DEBUG] Filtered from {len(history_records)} to {len(filtered)} records")
+            return filtered
+        
+        # Apply date range filter
+        history_records = filter_records(history_records, dateRange, now)
+
+        
+        # Apply type filter
+        if type != 'all':
+            history_records = [record for record in history_records if record.get('type') == type]
 
         for record in history_records:
             record['_id'] = str(record['_id'])  # Convert ObjectId to string
