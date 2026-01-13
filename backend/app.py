@@ -803,22 +803,14 @@ def get_history():
         type = request.headers.get('X-Filter-Type', 'all')
         dateRange = request.headers.get('X-Filter-Date', 'all')
         
-        print(f"[HISTORY DEBUG] Received filters - Type: '{type}', DateRange: '{dateRange}'")
-        
         # Filter records by date range
         now = get_localized_now()
         one_year_ago = now - timedelta(days=365)
-        
-        print(f"[HISTORY DEBUG] Current time (now): {now}")
         
         # Delete all records older than one year
         db_collection.delete_many({"timestamp": {"$lt": one_year_ago.isoformat()}})
 
         history_records = [record for record in history_records if 'timestamp' in record]
-        
-        print(f"[HISTORY DEBUG] Total records: {len(history_records)}")
-        for i, rec in enumerate(history_records[:3]):  # Print first 3
-            print(f"[HISTORY DEBUG] Record {i}: timestamp='{rec.get('timestamp')}', type='{rec.get('type')}'")
         
         # Helper function to parse timestamp safely and normalize timezone
         def parse_timestamp(ts_str):
@@ -836,8 +828,7 @@ def get_history():
                     dt = dt.replace(tzinfo=None)
                     
                 return dt
-            except Exception as e:
-                print(f"[HISTORY DEBUG] Error parsing timestamp '{ts_str}': {e}")
+            except:
                 return None
         
         # Helper function to filter records by date range
@@ -857,24 +848,15 @@ def get_history():
             elif dateRange == 'year':
                 threshold = now_naive - timedelta(days=365)
             else:
-                print(f"[HISTORY DEBUG] No filtering applied (dateRange={dateRange})")
                 return history_records  # 'all' or default
 
-            print(f"[HISTORY DEBUG] Threshold for '{dateRange}': {threshold} (now: {now_naive})")
-            
             filtered = []
             for r in history_records:
                 record_dt = parse_timestamp(r['timestamp'])
                 
-                if record_dt:
-                    is_included = record_dt >= threshold
-                    print(f"[HISTORY DEBUG] Record dt: {record_dt} >= {threshold}? {is_included}")
-                    
-                    # Check if record_dt is valid AND compare
-                    if is_included:
-                        filtered.append(r)
+                if record_dt and record_dt >= threshold:
+                    filtered.append(r)
             
-            print(f"[HISTORY DEBUG] Filtered from {len(history_records)} to {len(filtered)} records")
             return filtered
         
         # Apply date range filter

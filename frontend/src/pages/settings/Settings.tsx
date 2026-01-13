@@ -3,7 +3,7 @@ import Layout from '../../Layout';
 import { useNavigate } from 'react-router-dom';
 
 interface ActivityItem {
-    id: string;
+    _id: string;
     type: 'append_gaps' | 'sort' | 'upload_gaps' | 'edit_insurance' | 'contacts_vcf' | 'edit_config' | 'delete_config' | 'add_config' | 'other';
     description: string;
     timestamp: string;
@@ -348,36 +348,36 @@ const Settings: React.FC = () => {
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {history.map((history) => (
+                                {history.map((item) => (
                                     <div
-                                        key={history.id}
+                                        key={item._id}
                                         className="bg-slate-800/40 border border-slate-600/30 rounded-lg p-4 hover:bg-slate-800/60 transition-all duration-200"
                                     >
                                         <div className="flex items-start gap-4">
                                             <div className="flex-shrink-0 w-10 h-10 rounded-lg border flex items-center justify-center text-xl bg-slate-600/20 border-slate-500/50 text-slate-300">
-                                                {getHistoryIcon(history.type)}
+                                                {getHistoryIcon(item.type)}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-white font-medium mb-1">{history.description}</p>
+                                                <p className="text-white font-medium mb-1">{item.description}</p>
                                                 <div className="flex items-center gap-3 text-sm text-white/60">
-                                                    <span>{formatLocalTime(history.timestamp)}</span>
-                                                    {history.user && (
+                                                    <span>{formatLocalTime(item.timestamp)}</span>
+                                                    {item.user && (
                                                         <>
                                                             <span>•</span>
-                                                            <span>by {history.user}</span>
+                                                            <span>by {item.user}</span>
                                                         </>
                                                     )}
                                                 </div>
                                             </div>
-                                            {history.status && (
+                                            {item.status && (
                                                 <div className="flex-shrink-0">
-                                                    {history.status === 'success' && (
+                                                    {item.status === 'success' && (
                                                         <span className="text-green-400 text-sm">✓</span>
                                                     )}
-                                                    {history.status === 'error' && (
+                                                    {item.status === 'error' && (
                                                         <span className="text-red-400 text-sm">✗</span>
                                                     )}
-                                                    {history.status === 'warning' && (
+                                                    {item.status === 'warning' && (
                                                         <span className="text-yellow-400 text-sm">⚠</span>
                                                     )}
                                                 </div>
