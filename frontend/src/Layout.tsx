@@ -15,7 +15,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const downloadInstr = () => {
-    console.log("test press");
+    const link = document.createElement('a');
+    link.href = '/auditing_instruction.pdf';
+    link.download = "NCH Auditing Instructions.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Show info button on all pages except home and login
