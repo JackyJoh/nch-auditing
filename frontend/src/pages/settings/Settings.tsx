@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../Layout';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,15 +21,7 @@ const Settings: React.FC = () => {
     const [filterType, setFilterType] = useState<string>('all');
     const [filterDate, setFilterDate] = useState<string>('all');
 
-    useEffect(() => {
-        fetchGapsFileInfo();
-    }, []);
-
-    useEffect(() => {
-        fetchHistory()
-    }, [filterDate, filterType]);
-
-    const fetchGapsFileInfo = async () => {
+    const fetchGapsFileInfo = useCallback(async () => {
         try {
             const token = localStorage.getItem('authToken');
             if (!token) {
@@ -57,9 +49,9 @@ const Settings: React.FC = () => {
         } catch (error) {
             console.error("Error fetching gaps file info:", error);
         }
-    };
+    }, [API_BASE_URL, navigate]);
 
-    const fetchHistory = async () => {
+    const fetchHistory = useCallback(async () => {
         // Fetch history
         console.log('Fetching history with filters:', { filterType, filterDate });
         fetch(`${API_BASE_URL}/api/history`, {
@@ -82,7 +74,15 @@ const Settings: React.FC = () => {
         .catch(error => {
             console.error("Error fetching history:", error);
         });
-    }
+    }, [API_BASE_URL, filterType, filterDate]);
+
+    useEffect(() => {
+        fetchGapsFileInfo();
+    }, [fetchGapsFileInfo]);
+
+    useEffect(() => {
+        fetchHistory();
+    }, [fetchHistory]);
 
     const handleGapsFileUpload = async () => {
         if (!gapsFile) {

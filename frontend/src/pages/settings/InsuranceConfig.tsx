@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Layout from "../../Layout";
 import { useNavigate } from "react-router-dom";
 
@@ -26,13 +26,8 @@ const InsuranceConfig: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
-    // Fetch configs on component mount
-    useEffect(() => {
-        fetchConfigs();
-    }, []);
-
     // Fetch all configurations from backend
-    const fetchConfigs = async () => {
+    const fetchConfigs = useCallback(async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('authToken');
@@ -66,7 +61,12 @@ const InsuranceConfig: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_BASE_URL, navigate]);
+
+    // Fetch configs on component mount
+    useEffect(() => {
+        fetchConfigs();
+    }, [fetchConfigs]);
 
     // Handle input changes for field mappings
     const handleFieldChange = (label: string, value: string) => {

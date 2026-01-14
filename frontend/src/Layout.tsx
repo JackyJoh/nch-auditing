@@ -14,6 +14,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
+  const downloadInstr = () => {
+    console.log("test press");
+  };
+
+  // Show info button on all pages except home and login
+  const showInfoButton = location.pathname !== '/' && location.pathname !== '/login';
+
   return (
     <div className="flex h-screen w-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
       {/* Sidebar */}
@@ -70,7 +77,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </div>
 
       {/* Main Content Area */}
-      <div className="w-[87.5%] overflow-auto">
+      <div className="w-[87.5%] overflow-auto relative">
+        {/* Info Button - Top Right */}
+        {showInfoButton && (
+          <button
+            onClick={downloadInstr}
+            className="fixed top-4 right-4 z-50 w-10 h-10 rounded-lg bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 text-white flex items-center justify-center transition-all duration-200 shadow-lg"
+            title="Information"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="10" />
+              <circle cx="12" cy="7" r="0.5" fill="currentColor" />
+            </svg>
+          </button>
+        )}
         {children}
       </div>
     </div>
