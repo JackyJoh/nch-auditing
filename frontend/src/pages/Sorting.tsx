@@ -7,10 +7,100 @@ const Sorting: React.FC = () => {
     const [masterFile, setMasterFile] = useState<File | null>(null);
     const [zipFile, setZipFile] = useState<File | null>(null); // Updated to handle .zip file
     const [loading, setLoading] = useState(false);
+    const [isDraggingMaster, setIsDraggingMaster] = useState(false);
+    const [isDraggingZip, setIsDraggingZip] = useState(false);
 
     const handleZipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             setZipFile(e.target.files[0]); // Only allow one .zip file
+        }
+    };
+
+    // Master file drag handlers
+    const handleMasterDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingMaster(true);
+    };
+
+    const handleMasterDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        if (
+            e.clientX <= rect.left ||
+            e.clientX >= rect.right ||
+            e.clientY <= rect.top ||
+            e.clientY >= rect.bottom
+        ) {
+            setIsDraggingMaster(false);
+        }
+    };
+
+    const handleMasterDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingMaster(true);
+    };
+
+    const handleMasterDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingMaster(false);
+        
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            const fileName = file.name.toLowerCase();
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+                setMasterFile(file);
+            } else {
+                alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
+            }
+        }
+    };
+
+    // ZIP file drag handlers
+    const handleZipDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingZip(true);
+    };
+
+    const handleZipDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        if (
+            e.clientX <= rect.left ||
+            e.clientX >= rect.right ||
+            e.clientY <= rect.top ||
+            e.clientY >= rect.bottom
+        ) {
+            setIsDraggingZip(false);
+        }
+    };
+
+    const handleZipDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingZip(true);
+    };
+
+    const handleZipDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingZip(false);
+        
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            const fileName = file.name.toLowerCase();
+            if (fileName.endsWith('.zip')) {
+                setZipFile(file);
+            } else {
+                alert('Please upload only ZIP (.zip) files');
+            }
         }
     };
 
@@ -72,11 +162,19 @@ const Sorting: React.FC = () => {
                     <p className="text-white/70 text-xs mb-3">Upload the master care gap sheet that will be used as the key for sorting PDFs.</p>
                     
                     <div className="flex items-center gap-4">
-                        <label className="flex-1 cursor-pointer">
+                        <label 
+                            className="flex-1 cursor-pointer"
+                            onDragEnter={handleMasterDragEnter}
+                            onDragLeave={handleMasterDragLeave}
+                            onDragOver={handleMasterDragOver}
+                            onDrop={handleMasterDrop}
+                        >
                             <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-all duration-200 ${
-                                masterFile 
-                                    ? 'border-green-500/50 bg-green-500/10' 
-                                    : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
+                                isDraggingMaster
+                                    ? 'border-indigo-400 bg-indigo-500/20'
+                                    : masterFile 
+                                        ? 'border-green-500/50 bg-green-500/10' 
+                                        : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
                             }`}>
                                 <input
                                     type="file"
@@ -87,11 +185,13 @@ const Sorting: React.FC = () => {
                                 {masterFile ? (
                                     <div>
                                         <p className="text-green-400 font-semibold text-sm">✓ {masterFile.name}</p>
-                                        <p className="text-white/60 text-xs mt-1">Click to change file</p>
+                                        <p className="text-white/60 text-xs mt-1">Click or drag to change file</p>
                                     </div>
                                 ) : (
                                     <div>
-                                        <p className="text-white/80 font-semibold text-sm">Click to upload master care gap sheet</p>
+                                        <p className="text-white/80 font-semibold text-sm">
+                                            {isDraggingMaster ? 'Drop file here' : 'Drag & drop or click to upload'}
+                                        </p>
                                         <p className="text-white/60 text-xs mt-1">Excel or CSV files (.xlsx, .xls, .csv)</p>
                                     </div>
                                 )}
@@ -105,11 +205,19 @@ const Sorting: React.FC = () => {
                     <h2 className="text-white text-lg font-bold mb-2">PDF ZIP File (Required)</h2>
                     <p className="text-white/70 text-xs mb-3">Upload a ZIP file containing all PDFs to be sorted.</p>
                     
-                    <label className="flex-1 cursor-pointer flex items-center justify-center">
+                    <label 
+                        className="flex-1 cursor-pointer flex items-center justify-center"
+                        onDragEnter={handleZipDragEnter}
+                        onDragLeave={handleZipDragLeave}
+                        onDragOver={handleZipDragOver}
+                        onDrop={handleZipDrop}
+                    >
                         <div className={`w-full h-full border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 flex items-center justify-center ${
-                            zipFile
-                                ? 'border-green-500/50 bg-green-500/10' 
-                                : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
+                            isDraggingZip
+                                ? 'border-indigo-400 bg-indigo-500/20'
+                                : zipFile
+                                    ? 'border-green-500/50 bg-green-500/10' 
+                                    : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
                         }`}>
                             <input
                                 type="file"
@@ -120,11 +228,13 @@ const Sorting: React.FC = () => {
                             {zipFile ? (
                                 <div>
                                     <p className="text-green-400 font-semibold text-lg">✓ {zipFile.name}</p>
-                                    <p className="text-white/60 text-sm mt-2">Click to select a different ZIP file</p>
+                                    <p className="text-white/60 text-sm mt-2">Click or drag to change ZIP file</p>
                                 </div>
                             ) : (
                                 <div>
-                                    <p className="text-white/80 font-semibold text-lg">Click to upload ZIP file</p>
+                                    <p className="text-white/80 font-semibold text-lg">
+                                        {isDraggingZip ? 'Drop ZIP file here' : 'Drag & drop or click to upload'}
+                                    </p>
                                     <p className="text-white/60 text-sm mt-2">The ZIP file must contain all PDFs to be sorted</p>
                                 </div>
                             )}

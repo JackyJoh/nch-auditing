@@ -23,6 +23,8 @@ const Appending: React.FC = () => {
     const [masterFile, setMasterFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [enableToBeRemoved, setEnableToBeRemoved] = useState(false);
+    const [isDraggingMaster, setIsDraggingMaster] = useState(false);
+    const [draggingConfigId, setDraggingConfigId] = useState<string | null>(null);
 
     // Fetch insurance configs on mount
     useEffect(() => {
@@ -96,6 +98,95 @@ const Appending: React.FC = () => {
                     : upload
             )
         );
+    };
+
+    // Drag and drop handlers for master file
+    const handleMasterDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingMaster(true);
+    };
+
+    const handleMasterDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Only set to false if we're actually leaving the drop zone (not entering a child element)
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        if (
+            e.clientX <= rect.left ||
+            e.clientX >= rect.right ||
+            e.clientY <= rect.top ||
+            e.clientY >= rect.bottom
+        ) {
+            setIsDraggingMaster(false);
+        }
+    };
+
+    const handleMasterDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingMaster(true);
+    };
+
+    const handleMasterDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingMaster(false);
+        
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            const fileName = file.name.toLowerCase();
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+                setMasterFile(file);
+            } else {
+                alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
+            }
+        }
+    };
+
+    // Drag and drop handlers for config files
+    const handleConfigDragEnter = (configId: string) => (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDraggingConfigId(configId);
+    };
+
+    const handleConfigDragLeave = (configId: string) => (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        if (
+            e.clientX <= rect.left ||
+            e.clientX >= rect.right ||
+            e.clientY <= rect.top ||
+            e.clientY >= rect.bottom
+        ) {
+            setDraggingConfigId(null);
+        }
+    };
+
+    const handleConfigDragOver = (configId: string) => (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDraggingConfigId(configId);
+    };
+
+    const handleConfigDrop = (configId: string) => (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDraggingConfigId(null);
+        
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            const fileName = file.name.toLowerCase();
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+                handleFileChange(configId, file);
+            } else {
+                alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
+            }
+        }
     };
 
     const handleAppend = async () => {
@@ -177,16 +268,24 @@ const Appending: React.FC = () => {
             <div className="p-4 h-full flex flex-col gap-3">
 
                 {/* Master File Upload - Priority Section */}
-                <div className="bg-slate-700/60 backdrop-blur-sm border-2 border-indigo-500/50 rounded-xl shadow-lg p-4">
+                <div 
+                    className="bg-slate-700/60 backdrop-blur-sm border-2 border-indigo-500/50 rounded-xl shadow-lg p-4"
+                    onDragEnter={handleMasterDragEnter}
+                    onDragLeave={handleMasterDragLeave}
+                    onDragOver={handleMasterDragOver}
+                    onDrop={handleMasterDrop}
+                >
                     <h2 className="text-white text-lg font-bold mb-2">Master File (Required)</h2>
                     <p className="text-white/70 text-xs mb-3">Upload the master care gap sheet that all care gap sheets will be appended to.</p>
                     
                     <div className="flex items-center gap-4">
                         <label className="flex-1 cursor-pointer">
                             <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-all duration-200 ${
-                                masterFile 
-                                    ? 'border-green-500/50 bg-green-500/10' 
-                                    : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
+                                isDraggingMaster
+                                    ? 'border-indigo-400 bg-indigo-500/20'
+                                    : masterFile 
+                                        ? 'border-green-500/50 bg-green-500/10' 
+                                        : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
                             }`}>
                                 <input
                                     type="file"
@@ -197,11 +296,13 @@ const Appending: React.FC = () => {
                                 {masterFile ? (
                                     <div>
                                         <p className="text-green-400 font-semibold text-sm">✓ {masterFile.name}</p>
-                                        <p className="text-white/60 text-xs mt-1">Click to change file</p>
+                                        <p className="text-white/60 text-xs mt-1">Click or drag to change file</p>
                                     </div>
                                 ) : (
                                     <div>
-                                        <p className="text-white/80 font-semibold text-sm">Click to upload master file</p>
+                                        <p className="text-white/80 font-semibold text-sm">
+                                            {isDraggingMaster ? 'Drop file here' : 'Drag & drop or click to upload'}
+                                        </p>
                                         <p className="text-white/60 text-xs mt-1">Excel or CSV files (.xlsx, .xls, .csv)</p>
                                     </div>
                                 )}
@@ -275,7 +376,14 @@ const Appending: React.FC = () => {
                         ) : (
                             <div className={`grid gap-3 ${fileUploads.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                 {fileUploads.map(upload => (
-                                    <div key={upload.configId} className="bg-slate-800/60 border border-slate-600/50 rounded-lg p-3">
+                                    <div 
+                                        key={upload.configId} 
+                                        className="bg-slate-800/60 border border-slate-600/50 rounded-lg p-3"
+                                        onDragEnter={handleConfigDragEnter(upload.configId)}
+                                        onDragLeave={handleConfigDragLeave(upload.configId)}
+                                        onDragOver={handleConfigDragOver(upload.configId)}
+                                        onDrop={handleConfigDrop(upload.configId)}
+                                    >
                                         <h3 className="text-white font-semibold text-base mb-3">{upload.configName}</h3>
                                         
                                         {/* Two Column Layout */}
@@ -284,9 +392,11 @@ const Appending: React.FC = () => {
                                             <div>
                                                 <label className="cursor-pointer block">
                                                     <div className={`border-2 border-dashed rounded-lg p-3 text-center transition-all duration-200 ${
-                                                        upload.file 
-                                                            ? 'border-green-500/50 bg-green-500/10' 
-                                                            : 'border-slate-500/50 bg-slate-700/50 hover:border-indigo-500/50'
+                                                        draggingConfigId === upload.configId
+                                                            ? 'border-indigo-400 bg-indigo-500/20'
+                                                            : upload.file 
+                                                                ? 'border-green-500/50 bg-green-500/10' 
+                                                                : 'border-slate-500/50 bg-slate-700/50 hover:border-indigo-500/50'
                                                     }`}>
                                                         <input
                                                             type="file"
@@ -297,11 +407,13 @@ const Appending: React.FC = () => {
                                                         {upload.file ? (
                                                             <div>
                                                                 <p className="text-green-400 font-semibold text-sm">✓ {upload.file.name}</p>
-                                                                <p className="text-white/60 text-xs mt-1">Click to change file</p>
+                                                                <p className="text-white/60 text-xs mt-1">Click or drag to change file</p>
                                                             </div>
                                                         ) : (
                                                             <div>
-                                                                <p className="text-white/80 text-sm">Click to upload file</p>
+                                                                <p className="text-white/80 text-sm">
+                                                                    {draggingConfigId === upload.configId ? 'Drop file here' : 'Drag & drop or click to upload'}
+                                                                </p>
                                                                 <p className="text-white/60 text-xs mt-1">Excel or CSV files</p>
                                                             </div>
                                                         )}

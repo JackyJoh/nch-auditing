@@ -6,9 +6,54 @@ const Contacts = () => {
     const [contactHeader, setContactHeader] = useState('');
     const [phoneHeader, setPhoneHeader] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
 
     // Get API base URL from environment variable, fallback to empty string for local development
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
+
+    // Drag and drop handlers
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        if (
+            e.clientX <= rect.left ||
+            e.clientX >= rect.right ||
+            e.clientY <= rect.top ||
+            e.clientY >= rect.bottom
+        ) {
+            setIsDragging(false);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            const droppedFile = files[0];
+            const fileName = droppedFile.name.toLowerCase();
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+                setFile(droppedFile);
+            } else {
+                alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
+            }
+        }
+    };
 
     // Example handler for backend call
     const handleGenerateVCF = async () => {
@@ -78,11 +123,19 @@ const Contacts = () => {
                                 </p>
                             </div>
                             {/* Contact Sheet File Input */}
-                            <label className="cursor-pointer flex-1 flex items-center justify-center mb-3">
+                            <label 
+                                className="cursor-pointer flex-1 flex items-center justify-center mb-3"
+                                onDragEnter={handleDragEnter}
+                                onDragLeave={handleDragLeave}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                            >
                                 <div className={`w-full border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 ${
-                                    file
-                                        ? 'border-green-500/50 bg-green-500/10'
-                                        : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50'
+                                    isDragging
+                                        ? 'border-indigo-400 bg-indigo-500/20'
+                                        : file
+                                            ? 'border-green-500/50 bg-green-500/10'
+                                            : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50'
                                 }`}>
                                     <input
                                         type="file"
@@ -94,11 +147,13 @@ const Contacts = () => {
                                     {file ? (
                                         <div>
                                             <p className="text-green-400 font-semibold">✓ {file.name}</p>
-                                            <p className="text-white/60 text-sm mt-1">Click to change</p>
+                                            <p className="text-white/60 text-sm mt-1">Click or drag to change</p>
                                         </div>
                                     ) : (
                                         <div>
-                                            <p className="text-white/80 font-semibold">Click to upload contact sheet</p>
+                                            <p className="text-white/80 font-semibold">
+                                                {isDragging ? 'Drop file here' : 'Drag & drop or click to upload'}
+                                            </p>
                                             <p className="text-white/60 text-sm mt-1">Excel or CSV files</p>
                                         </div>
                                     )}
