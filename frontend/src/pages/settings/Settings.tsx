@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../Layout';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface ActivityItem {
     _id: string;
@@ -13,20 +14,22 @@ interface ActivityItem {
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
     const [gapsFile, setGapsFile] = useState<File | null>(null);
-    const [gapsFileInfo, setGapsFileInfo] = useState<any>(null);
     const [loading, setLoading] = useState(false);
-    const [history, setHistory] = useState<ActivityItem[]>([]);
     const [filterType, setFilterType] = useState<string>('all');
     const [filterDate, setFilterDate] = useState<string>('all');
 
-    const fetchGapsFileInfo = useCallback(async () => {
-        try {
+    const {data : gapsFileInfo} = useQuery ({
+        queryKey: ['gapsFileInfo'],
+        queryFn: async () => {
+
+            try {
             const token = localStorage.getItem('authToken');
             if (!token) {
                 navigate('/login');
-                return;
+                throw new Error('No auth token');
             }
             
             const response = await fetch(`${API_BASE_URL}/api/gaps-file`, {
@@ -42,47 +45,37 @@ const Settings: React.FC = () => {
                 return;
             }
             
-            if (response.ok) {
-                const data = await response.json();
-                setGapsFileInfo(data);
-            }
+            return response.json();
         } catch (error) {
             console.error("Error fetching gaps file info:", error);
         }
-    }, [API_BASE_URL, navigate]);
+            
+        }
+        
+    });
 
-    const fetchHistory = useCallback(async () => {
-        // Fetch history
-        console.log('Fetching history with filters:', { filterType, filterDate });
-        fetch(`${API_BASE_URL}/api/history`, {
+    const {data : history = []} = useQuery<ActivityItem[]> ({
+        queryKey: ['history',  filterType, filterDate],
+        queryFn: async () => {
+            console.log('Fetching history with filters:', { filterType, filterDate });
+        const response  = await fetch(`${API_BASE_URL}/api/history`, {
             credentials: 'include',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
                 'X-Filter-Type' : filterType,
                 'X-Filter-Date' : filterDate
             }
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error('Failed to fetch history');
-        })
-        .then(data => {
-            setHistory(data);
-        })
-        .catch(error => {
-            console.error("Error fetching history:", error);
         });
-    }, [API_BASE_URL, filterType, filterDate]);
+        if (!response.ok) {
+                throw new Error('Failed to fetch history');
+        }
 
-    useEffect(() => {
-        fetchGapsFileInfo();
-    }, [fetchGapsFileInfo]);
+        return response.json();
 
-    useEffect(() => {
-        fetchHistory();
-    }, [fetchHistory]);
+        }
+
+    });
+
 
     const handleGapsFileUpload = async () => {
         if (!gapsFile) {
@@ -119,7 +112,7 @@ const Settings: React.FC = () => {
             if (response.ok) {
                 alert("Gap Name Keys file uploaded successfully!");
                 setGapsFile(null);
-                fetchGapsFileInfo();
+                queryClient.invalidateQueries({ queryKey : ['gapsFileInfo']});
             } else {
                 const error = await response.json();
                 alert(`Failed to upload: ${error.message}`);
