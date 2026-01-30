@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../Layout';
 
 interface InsuranceConfig {
@@ -26,58 +27,225 @@ const Appending: React.FC = () => {
     const [isDraggingMaster, setIsDraggingMaster] = useState(false);
     const [draggingConfigId, setDraggingConfigId] = useState<string | null>(null);
 
-    // Fetch insurance configs on mount
+    const queryClient = useQueryClient();
+
+    // Save file to localStorage as base64 string
+    const saveFileToLocalStorage = async (key: string, file: File) => {
+        return new Promise<void>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                localStorage.setItem(key, reader.result as string);
+                localStorage.setItem(`${key}_name`, file.name);
+                resolve();
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    };
+
+    // Load file from localStorage
+    const loadFileFromLocalStorage = (key: string): File | null => {
+        const base64 = localStorage.getItem(key);
+        const name = localStorage.getItem(`${key}_name`) || '';
+        if (!base64) return null;
+        try {
+            const arr = base64.split(',');
+            const mime = arr[0].match(/:(.*?);/)?.[1] || '';
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], name, { type: mime });
+        } catch (error) {
+            console.error('Error loading file from localStorage:', error);
+            return null;
+        }
+    };
+
+    // Load all config files from localStorage
+    const loadConfigFilesFromLocalStorage = (): Record<string, File> => {
+        const configFiles: Record<string, File> = {};
+        // Get all keys from localStorage that match the pattern
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('appending_config_') && !key.endsWith('_name')) {
+                const file = loadFileFromLocalStorage(key);
+                if (file) {
+                    const configId = key.replace('appending_config_', '');
+                    configFiles[configId] = file;
+                }
+            }
+        }
+        return configFiles;
+    };
+
+    // React Query for loading master file
+    const { data: savedMasterFile } = useQuery({
+        queryKey: ['appendingMasterFile'],
+        queryFn: () => loadFileFromLocalStorage('appending_master'),
+    });
+
+    // React Query for loading config files
+    const { data: savedConfigFiles } = useQuery({
+        queryKey: ['appendingConfigFiles'],
+        queryFn: loadConfigFilesFromLocalStorage,
+    });
+
+    // Mutation for saving master file
+    const saveMasterFileMutation = useMutation({
+        mutationFn: (file: File) => saveFileToLocalStorage('appending_master', file),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['appendingMasterFile'] });
+        },
+    });
+
+    // Mutation for saving config file
+    const saveConfigFileMutation = useMutation({
+        mutationFn: ({ configId, file }: { configId: string; file: File }) => 
+            saveFileToLocalStorage(`appending_config_${configId}`, file),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['appendingConfigFiles'] });
+        },
+    });
+
+    // On mount, load master file from localStorage if exists
     useEffect(() => {
-        fetchConfigs();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        if (savedMasterFile) {
+            setMasterFile(savedMasterFile);
+        }
+    }, [savedMasterFile]);
+
+    // Fetch insurance configs function
+    const fetchConfigs = async (): Promise<InsuranceConfig[]> => {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = '/login';
+            throw new Error('No auth token');
+        }
+        const response = await fetch(`${API_BASE_URL}/api/insurance-configs`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+        if (response.ok) {
+            const data = await response.json();
+            return data;
+        } else if (response.status === 401) {
+            localStorage.removeItem('authToken');
+            window.location.href = '/login';
+            throw new Error('Unauthorized');
+        }
+        throw new Error('Failed to fetch configs');
+    };
+
+    // React Query for fetching and caching insurance configs
+    const { data: cachedConfigs } = useQuery({
+        queryKey: ['insuranceConfigs'],
+        queryFn: fetchConfigs,
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
+
+    // Update configs state when cached data changes
+    useEffect(() => {
+        if (cachedConfigs) {
+            setConfigs(cachedConfigs);
+        }
+    }, [cachedConfigs]);
+
+    // Load selected configs from localStorage
+    const loadSelectedConfigs = (): string[] => {
+        const saved = localStorage.getItem('appending_selectedConfigs');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (error) {
+                console.error('Error parsing saved selected configs:', error);
+            }
+        }
+        return [];
+    };
+
+    // React Query for loading selected configs
+    const { data: savedSelectedConfigs } = useQuery({
+        queryKey: ['appendingSelectedConfigs'],
+        queryFn: loadSelectedConfigs,
+    });
+
+    // Mutation for saving selected configs
+    const saveSelectedConfigsMutation = useMutation({
+        mutationFn: async (selectedIds: string[]) => {
+            localStorage.setItem('appending_selectedConfigs', JSON.stringify(selectedIds));
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['appendingSelectedConfigs'] });
+        },
+    });
+
+    // Restore selected configs on mount
+    useEffect(() => {
+        if (savedSelectedConfigs && savedSelectedConfigs.length > 0) {
+            setSelectedConfigs(savedSelectedConfigs);
+        }
+    }, [savedSelectedConfigs]);
+
+    // Load enableToBeRemoved from localStorage
+    const loadEnableToBeRemoved = (): boolean => {
+        const saved = localStorage.getItem('appending_enableToBeRemoved');
+        return saved === 'true';
+    };
+
+    // React Query for loading enableToBeRemoved
+    const { data: savedEnableToBeRemoved } = useQuery({
+        queryKey: ['appendingEnableToBeRemoved'],
+        queryFn: loadEnableToBeRemoved,
+    });
+
+    // Mutation for saving enableToBeRemoved
+    const saveEnableToBeRemovedMutation = useMutation({
+        mutationFn: async (enabled: boolean) => {
+            localStorage.setItem('appending_enableToBeRemoved', enabled.toString());
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['appendingEnableToBeRemoved'] });
+        },
+    });
+
+    // Restore enableToBeRemoved on mount
+    useEffect(() => {
+        if (savedEnableToBeRemoved !== undefined) {
+            setEnableToBeRemoved(savedEnableToBeRemoved);
+        }
+    }, [savedEnableToBeRemoved]);
 
     // Update file uploads when selected configs change
     useEffect(() => {
         const newUploads = selectedConfigs.map(configId => {
             const existingUpload = fileUploads.find(u => u.configId === configId);
             const config = configs.find(c => c._id === configId);
+            // Check if there's a saved file for this config
+            const savedFile = savedConfigFiles?.[configId] || null;
             return existingUpload || {
                 configId,
                 configName: config?.name || '',
-                file: null,
+                file: savedFile,
                 notesHeader: ''
             };
         });
         setFileUploads(newUploads);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedConfigs, configs]);
-
-    const fetchConfigs = async () => {
-        try {
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-                window.location.href = '/login';
-                return;
-            }
-            const response = await fetch(`${API_BASE_URL}/api/insurance-configs`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setConfigs(data);
-            } else if (response.status === 401) {
-                localStorage.removeItem('authToken');
-                window.location.href = '/login';
-            }
-        } catch (error) {
-            console.error("Error fetching configs:", error);
-        }
-    };
+    }, [selectedConfigs, configs, savedConfigFiles]);
 
     const toggleConfigSelection = (configId: string) => {
-        setSelectedConfigs(prev => 
-            prev.includes(configId) 
+        setSelectedConfigs(prev => {
+            const newSelection = prev.includes(configId) 
                 ? prev.filter(id => id !== configId)
-                : [...prev, configId]
-        );
+                : [...prev, configId];
+            // Save to cache
+            saveSelectedConfigsMutation.mutate(newSelection);
+            return newSelection;
+        });
     };
 
     const handleFileChange = (configId: string, file: File | null) => {
@@ -88,6 +256,10 @@ const Appending: React.FC = () => {
                     : upload
             )
         );
+        // Save to localStorage
+        if (file) {
+            saveConfigFileMutation.mutate({ configId, file });
+        }
     };
 
     const handleNotesHeaderChange = (configId: string, notesHeader: string) => {
@@ -139,6 +311,7 @@ const Appending: React.FC = () => {
             const fileName = file.name.toLowerCase();
             if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
                 setMasterFile(file);
+                saveMasterFileMutation.mutate(file);
             } else {
                 alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
@@ -183,6 +356,7 @@ const Appending: React.FC = () => {
             const fileName = file.name.toLowerCase();
             if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
                 handleFileChange(configId, file);
+                saveConfigFileMutation.mutate({ configId, file });
             } else {
                 alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
@@ -290,7 +464,11 @@ const Appending: React.FC = () => {
                                 <input
                                     type="file"
                                     accept=".xlsx,.xls,.csv"
-                                    onChange={(e) => setMasterFile(e.target.files?.[0] || null)}
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0] || null;
+                                        setMasterFile(file);
+                                        if (file) saveMasterFileMutation.mutate(file);
+                                    }}
                                     className="hidden"
                                 />
                                 {masterFile ? (
@@ -317,7 +495,11 @@ const Appending: React.FC = () => {
                                 <input
                                     type="checkbox"
                                     checked={enableToBeRemoved}
-                                    onChange={(e) => setEnableToBeRemoved(e.target.checked)}
+                                    onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setEnableToBeRemoved(checked);
+                                        saveEnableToBeRemovedMutation.mutate(checked);
+                                    }}
                                     className="sr-only peer"
                                 />
                                 <div className="w-11 h-6 bg-slate-600/60 rounded-full peer-checked:bg-indigo-600/80 transition-all duration-200 border border-slate-500/50 peer-checked:border-indigo-400/50"></div>
@@ -401,7 +583,11 @@ const Appending: React.FC = () => {
                                                         <input
                                                             type="file"
                                                             accept=".xlsx,.xls,.csv"
-                                                            onChange={(e) => handleFileChange(upload.configId, e.target.files?.[0] || null)}
+                                                            onChange={(e) => {
+                                                                const file = e.target.files?.[0] || null;
+                                                                handleFileChange(upload.configId, file);
+                                                                if (file) saveConfigFileMutation.mutate({ configId: upload.configId, file });
+                                                            }}
                                                             className="hidden"
                                                         />
                                                         {upload.file ? (

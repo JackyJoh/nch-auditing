@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../Layout';
 
 const Contacts = () => {
     const [file, setFile] = useState<File | null>(null);
+    const [fileName, setFileName] = useState<string>('');
     const [contactHeader, setContactHeader] = useState('');
     const [phoneHeader, setPhoneHeader] = useState('');
     const [loading, setLoading] = useState(false);
@@ -42,18 +44,75 @@ const Contacts = () => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
-        
         const files = e.dataTransfer.files;
         if (files && files.length > 0) {
             const droppedFile = files[0];
             const fileName = droppedFile.name.toLowerCase();
             if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
                 setFile(droppedFile);
+                setFileName(droppedFile.name);
+                saveFileMutation.mutate(droppedFile);
             } else {
                 alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
         }
     };
+
+    // Save file to localStorage as base64 string
+    const saveFileToLocalStorage = async (file: File) => {
+        return new Promise<void>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                localStorage.setItem('contactsFile', reader.result as string);
+                localStorage.setItem('contactsFileName', file.name);
+                resolve();
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    };
+
+    // Load file from localStorage
+    const loadFileFromLocalStorage = () => {
+        const base64 = localStorage.getItem('contactsFile');
+        const name = localStorage.getItem('contactsFileName') || '';
+        if (!base64) return null;
+        const arr = base64.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || '';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new File([u8arr], name, { type: mime });
+    };
+
+    // React Query for loading file
+    const { data: savedFile } = useQuery({
+        queryKey: ['contactsFile'],
+        queryFn: loadFileFromLocalStorage,
+    });
+
+    // Mutation for saving file
+    const queryClient = useQueryClient();
+    const saveFileMutation = useMutation({
+        mutationFn: saveFileToLocalStorage,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['contactsFile'] });
+        },
+    });
+
+    // On mount, load file from localStorage if exists
+    useEffect(() => {
+        if (savedFile) {
+            setFile(savedFile);
+            setFileName(savedFile.name);
+        }
+    }, [savedFile]);
+
+    
+
 
     // Example handler for backend call
     const handleGenerateVCF = async () => {
@@ -140,13 +199,18 @@ const Contacts = () => {
                                     <input
                                         type="file"
                                         accept=".xlsx,.xls,.csv"
-                                        onChange={e => setFile(e.target.files?.[0] || null)}
+                                        onChange={e => {
+                                            const f = e.target.files?.[0] || null;
+                                            setFile(f);
+                                            setFileName(f?.name || '');
+                                            if (f) saveFileMutation.mutate(f);
+                                        }}
                                         className="hidden"
                                         name="contactSheet"
                                     />
                                     {file ? (
                                         <div>
-                                            <p className="text-green-400 font-semibold">✓ {file.name}</p>
+                                            <p className="text-green-400 font-semibold">✓ {fileName}</p>
                                             <p className="text-white/60 text-sm mt-1">Click or drag to change</p>
                                         </div>
                                     ) : (
