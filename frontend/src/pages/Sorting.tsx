@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../Layout';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const Sorting: React.FC = () => {
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || "http://localhost:5000").replace(/\/+$/, ''); // Remove trailing slashes
     
     const [masterFile, setMasterFile] = useState<File | null>(null);
@@ -10,9 +14,88 @@ const Sorting: React.FC = () => {
     const [isDraggingMaster, setIsDraggingMaster] = useState(false);
     const [isDraggingZip, setIsDraggingZip] = useState(false);
 
+    // Save file to localStorage as base64 string
+    const saveFileToLocalStorage = async (key: string, file: File) => {
+        return new Promise<void>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                localStorage.setItem(key, reader.result as string);
+                localStorage.setItem(`${key}_name`, file.name);
+                resolve();
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    };
+
+    // Load file from localStorage
+    const loadFileFromLocalStorage = (key: string): File | null => {
+        const base64 = localStorage.getItem(key);
+        const name = localStorage.getItem(`${key}_name`) || '';
+        if (!base64) return null;
+        try {
+            const arr = base64.split(',');
+            const mime = arr[0].match(/:(.*?);/)?.[1] || '';
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], name, { type: mime });
+        } catch (error) {
+            console.error('Error loading file from localStorage:', error);
+            return null;
+        }
+    };
+
+    // React Query for loading master file
+    const { data: savedMasterFile } = useQuery({
+        queryKey: ['sortingMasterFile'],
+        queryFn: () => loadFileFromLocalStorage('sorting_master'),
+    });
+
+    // React Query for loading zip file
+    const { data: savedZipFile } = useQuery({
+        queryKey: ['sortingZipFile'],
+        queryFn: () => loadFileFromLocalStorage('sorting_zip'),
+    });
+
+    // Mutation for saving master file
+    const saveMasterFileMutation = useMutation({
+        mutationFn: (file: File) => saveFileToLocalStorage('sorting_master', file),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['sortingMasterFile'] });
+        },
+    });
+
+    // Mutation for saving zip file
+    const saveZipFileMutation = useMutation({
+        mutationFn: (file: File) => saveFileToLocalStorage('sorting_zip', file),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['sortingZipFile'] });
+        },
+    });
+
+    // On mount, load master file from localStorage if exists
+    useEffect(() => {
+        if (savedMasterFile) {
+            setMasterFile(savedMasterFile);
+        }
+    }, [savedMasterFile]);
+
+    // On mount, load zip file from localStorage if exists
+    useEffect(() => {
+        if (savedZipFile) {
+            setZipFile(savedZipFile);
+        }
+    }, [savedZipFile]);
+
     const handleZipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            setZipFile(e.target.files[0]); // Only allow one .zip file
+            const file = e.target.files[0];
+            setZipFile(file); // Only allow one .zip file
+            saveZipFileMutation.mutate(file);
         }
     };
 
@@ -54,6 +137,7 @@ const Sorting: React.FC = () => {
             const fileName = file.name.toLowerCase();
             if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
                 setMasterFile(file);
+                saveMasterFileMutation.mutate(file);
             } else {
                 alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
@@ -98,6 +182,7 @@ const Sorting: React.FC = () => {
             const fileName = file.name.toLowerCase();
             if (fileName.endsWith('.zip')) {
                 setZipFile(file);
+                saveZipFileMutation.mutate(file);
             } else {
                 alert('Please upload only ZIP (.zip) files');
             }
@@ -140,6 +225,9 @@ const Sorting: React.FC = () => {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 
+                // Invalidate cache to refresh history
+                queryClient.invalidateQueries({ queryKey: ['history'] });
+                
                 alert("PDFs sorted successfully! Check your downloads.");
             } else {
                 const error = await response.json();
@@ -179,7 +267,11 @@ const Sorting: React.FC = () => {
                                 <input
                                     type="file"
                                     accept=".xlsx,.xls,.csv"
-                                    onChange={(e) => setMasterFile(e.target.files?.[0] || null)}
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0] || null;
+                                        setMasterFile(file);
+                                        if (file) saveMasterFileMutation.mutate(file);
+                                    }}
                                     className="hidden"
                                 />
                                 {masterFile ? (
