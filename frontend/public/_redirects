@@ -1,4 +1,0 @@
-/* /index.html 200
-
-# Proxy API calls to your Render backend (The crucial line!)
-/api/* https://nch-auditing.onrender.com/:splat 200

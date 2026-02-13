@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../Layout';
+import { FilePreviewButton } from '../components/FilePreviewModal';
 
 const Contacts = () => {
     const [file, setFile] = useState<File | null>(null);
@@ -212,6 +213,7 @@ const Contacts = () => {
                                         <div>
                                             <p className="text-green-400 font-semibold">✓ {fileName}</p>
                                             <p className="text-white/60 text-sm mt-1">Click or drag to change</p>
+                                            <FilePreviewButton file={file} />
                                         </div>
                                     ) : (
                                         <div>

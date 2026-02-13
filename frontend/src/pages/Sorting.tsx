@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../Layout';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { FilePreviewButton } from '../components/FilePreviewModal';
 
 const Sorting: React.FC = () => {
     const navigate = useNavigate();
@@ -278,6 +279,7 @@ const Sorting: React.FC = () => {
                                     <div>
                                         <p className="text-green-400 font-semibold text-sm">✓ {masterFile.name}</p>
                                         <p className="text-white/60 text-xs mt-1">Click or drag to change file</p>
+                                        <FilePreviewButton file={masterFile} />
                                     </div>
                                 ) : (
                                     <div>

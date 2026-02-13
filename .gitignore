@@ -1,3 +1,5 @@
+# Ignore .claude folder
+.claude/
 # Environment variables
 .env
 .env.local

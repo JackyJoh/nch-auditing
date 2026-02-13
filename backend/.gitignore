@@ -1,3 +1,5 @@
+# Ignore .claude folder
+.claude/
 # Python
 *.pyc
 __pycache__/
@@ -34,3 +36,5 @@ ENV/
 *.log
 *.tmp
 temp/
+
+./claude
