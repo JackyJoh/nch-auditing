@@ -191,6 +191,29 @@ const Settings: React.FC = () => {
         }
     };
 
+    const handleExportCSV = () => {
+        const headers = ['Type', 'Description', 'Timestamp', 'User', 'Status'];
+        const rows = history.map((item) => [
+            item.type,
+            item.description,
+            formatLocalTime(item.timestamp),
+            item.user ?? '',
+            item.status ?? ''
+        ]);
+
+        const escape = (val: string) => `"${val.replace(/"/g, '""')}"`;
+        const csv = [headers, ...rows].map(row => row.map(escape).join(',')).join('\r\n');
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.download = `activity-history-${dateStr}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     const formatLocalTime = (isoString: string) => {
         // Handles both ISO string and Date object
         const date = new Date(isoString);
@@ -294,6 +317,17 @@ const Settings: React.FC = () => {
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-white text-2xl font-bold">Recent Activity</h3>
                         <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleExportCSV}
+                                disabled={history.length === 0}
+                                className="flex items-center gap-1.5 bg-slate-800/70 border border-slate-600/50 hover:bg-slate-700/70 hover:border-slate-500/50 text-white/80 hover:text-white text-sm font-medium px-3 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                                title="Export current view as CSV"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                                </svg>
+                                Export CSV
+                            </button>
                             {/* Type Filter */}
                             <div className="flex items-center gap-2">
                                 <label className="text-white/70 text-sm font-medium">Type:</label>
