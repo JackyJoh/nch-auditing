@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../Layout';
-import { FilePreviewButton } from '../components/FilePreviewModal';
+import { FilePreviewButton, FileInfoBadge } from '../components/FilePreviewModal';
 
 interface InsuranceConfig {
     _id: string;
@@ -475,6 +475,7 @@ const Appending: React.FC = () => {
                                 {masterFile ? (
                                     <div>
                                         <p className="text-green-400 font-semibold text-sm">✓ {masterFile.name}</p>
+                                        <FileInfoBadge file={masterFile} />
                                         <p className="text-white/60 text-xs mt-1">Click or drag to change file</p>
                                         <FilePreviewButton file={masterFile} />
                                     </div>
@@ -595,6 +596,7 @@ const Appending: React.FC = () => {
                                                         {upload.file ? (
                                                             <div>
                                                                 <p className="text-green-400 font-semibold text-sm">✓ {upload.file.name}</p>
+                                                                <FileInfoBadge file={upload.file} />
                                                                 <p className="text-white/60 text-xs mt-1">Click or drag to change file</p>
                                                                 <FilePreviewButton file={upload.file} />
                                                             </div>

@@ -1,6 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { parseSpreadsheetPreview, SpreadsheetPreviewData } from '../utils/parseSpreadsheet';
+import { parseSpreadsheetPreview, getSpreadsheetRowCount, SpreadsheetPreviewData } from '../utils/parseSpreadsheet';
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+interface FileInfoBadgeProps {
+  file: File;
+}
+
+export const FileInfoBadge: React.FC<FileInfoBadgeProps> = ({ file }) => {
+  const [rowCount, setRowCount] = useState<number | null>(null);
+  const isSpreadsheet = /\.(xlsx|xls|csv)$/i.test(file.name);
+
+  useEffect(() => {
+    if (!isSpreadsheet) return;
+    setRowCount(null);
+    getSpreadsheetRowCount(file).then(setRowCount).catch(() => setRowCount(null));
+  }, [file, isSpreadsheet]);
+
+  return (
+    <p className="text-white/50 text-xs mt-1">
+      {formatFileSize(file.size)}{rowCount !== null ? ` · ${rowCount.toLocaleString()} rows` : ''}
+    </p>
+  );
+};
 
 interface FilePreviewModalProps {
   file: File;
