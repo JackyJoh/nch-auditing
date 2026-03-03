@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../Layout';
 import { FilePreviewButton, FileInfoBadge } from '../components/FilePreviewModal';
+import { useToast } from '../contexts/ToastContext';
 
 interface InsuranceConfig {
     _id: string;
@@ -18,6 +19,7 @@ interface FileUpload {
 
 const Appending: React.FC = () => {
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000";
+    const toast = useToast();
     
     const [configs, setConfigs] = useState<InsuranceConfig[]>([]);
     const [selectedConfigs, setSelectedConfigs] = useState<string[]>([]);
@@ -314,7 +316,7 @@ const Appending: React.FC = () => {
                 setMasterFile(file);
                 saveMasterFileMutation.mutate(file);
             } else {
-                alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
+                toast.warning('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
         }
     };
@@ -359,14 +361,14 @@ const Appending: React.FC = () => {
                 handleFileChange(configId, file);
                 saveConfigFileMutation.mutate({ configId, file });
             } else {
-                alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
+                toast.warning('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
         }
     };
 
     const handleAppend = async () => {
         if (!masterFile || fileUploads.length === 0 || fileUploads.some(u => !u.file)) {
-            alert("Please upload all required files");
+            toast.warning("Please upload all required files");
             return;
         }
 
@@ -422,17 +424,17 @@ const Appending: React.FC = () => {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 
-                alert("Files merged successfully! Check your downloads.");
+                toast.success("Files merged successfully! Check your downloads.");
             } else if (response.status === 401) {
                 localStorage.removeItem('authToken');
                 window.location.href = '/login';
             } else {
                 const error = await response.json();
-                alert(`Failed to merge files: ${error.message}`);
+                toast.error(`Failed to merge files: ${error.message}`);
             }
         } catch (error) {
             console.error("Error merging files:", error);
-            alert("Error connecting to server");
+            toast.error("Error connecting to server");
         } finally {
             setLoading(false);
         }

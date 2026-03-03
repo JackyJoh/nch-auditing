@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../Layout';
 import { FilePreviewButton, FileInfoBadge } from '../components/FilePreviewModal';
+import { useToast } from '../contexts/ToastContext';
 
 const Contacts = () => {
+    const toast = useToast();
     const [file, setFile] = useState<File | null>(null);
     const [fileName, setFileName] = useState<string>('');
     const [contactHeader, setContactHeader] = useState('');
@@ -54,7 +56,7 @@ const Contacts = () => {
                 setFileName(droppedFile.name);
                 saveFileMutation.mutate(droppedFile);
             } else {
-                alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
+                toast.warning('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
         }
     };
@@ -142,7 +144,7 @@ const Contacts = () => {
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
-                window.alert('VCF generated successfully.');
+                toast.success('VCF generated successfully.');
             } else {
                 // Try parse JSON error message, else show generic text
                 let errText = 'Failed to generate VCF';
@@ -154,11 +156,11 @@ const Contacts = () => {
                         errText = await response.text();
                     } catch {}
                 }
-                window.alert(`Error: ${errText}`);
+                toast.error(`Error: ${errText}`);
             }
         } catch (error: any) {
             console.error('Error generating VCF:', error);
-            window.alert(`Error generating VCF: ${error?.message || String(error)}`);
+            toast.error(`Error generating VCF: ${error?.message || String(error)}`);
         } finally {
             setLoading(false);
         }

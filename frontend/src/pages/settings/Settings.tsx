@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Layout from '../../Layout';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../../contexts/ToastContext';
 
 interface ActivityItem {
     _id: string;
@@ -15,6 +16,7 @@ interface ActivityItem {
 const Settings: React.FC = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const toast = useToast();
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
     const [gapsFile, setGapsFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
@@ -79,7 +81,7 @@ const Settings: React.FC = () => {
 
     const handleGapsFileUpload = async () => {
         if (!gapsFile) {
-            alert("Please select a file");
+            toast.warning("Please select a file");
             return;
         }
 
@@ -110,16 +112,16 @@ const Settings: React.FC = () => {
             }
 
             if (response.ok) {
-                alert("Gap Name Keys file uploaded successfully!");
+                toast.success("Gap Name Keys file uploaded successfully!");
                 setGapsFile(null);
                 queryClient.invalidateQueries({ queryKey : ['gapsFileInfo']});
             } else {
                 const error = await response.json();
-                alert(`Failed to upload: ${error.message}`);
+                toast.error(`Failed to upload: ${error.message}`);
             }
         } catch (error) {
             console.error("Error uploading gaps file:", error);
-            alert("Error connecting to server");
+            toast.error("Error connecting to server");
         } finally {
             setLoading(false);
         }

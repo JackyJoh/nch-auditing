@@ -3,9 +3,11 @@ import Layout from '../Layout';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FilePreviewButton, FileInfoBadge } from '../components/FilePreviewModal';
+import { useToast } from '../contexts/ToastContext';
 
 const Sorting: React.FC = () => {
     const navigate = useNavigate();
+    const toast = useToast();
     const queryClient = useQueryClient();
     const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || "http://localhost:5000").replace(/\/+$/, ''); // Remove trailing slashes
     
@@ -140,7 +142,7 @@ const Sorting: React.FC = () => {
                 setMasterFile(file);
                 saveMasterFileMutation.mutate(file);
             } else {
-                alert('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
+                toast.warning('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
         }
     };
@@ -185,14 +187,14 @@ const Sorting: React.FC = () => {
                 setZipFile(file);
                 saveZipFileMutation.mutate(file);
             } else {
-                alert('Please upload only ZIP (.zip) files');
+                toast.warning('Please upload only ZIP (.zip) files');
             }
         }
     };
 
     const handleSort = async () => {
         if (!masterFile || !zipFile) {
-            alert("Please upload all required files");
+            toast.warning("Please upload all required files");
             return;
         }
 
@@ -229,14 +231,14 @@ const Sorting: React.FC = () => {
                 // Invalidate cache to refresh history
                 queryClient.invalidateQueries({ queryKey: ['history'] });
                 
-                alert("PDFs sorted successfully! Check your downloads.");
+                toast.success("PDFs sorted successfully! Check your downloads.");
             } else {
                 const error = await response.json();
-                alert(`Failed to sort PDFs: ${error.message}`);
+                toast.error(`Failed to sort PDFs: ${error.message}`);
             }
         } catch (error) {
             console.error("Error sorting PDFs:", error);
-            alert("Error connecting to server");
+            toast.error("Error connecting to server");
         } finally {
             setLoading(false);
         }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Layout from "../../Layout";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../../contexts/ToastContext";
 
 interface InsuranceConfigData {
     _id: string;
@@ -12,6 +13,7 @@ interface InsuranceConfigData {
 const InsuranceConfig: React.FC = () => {
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
     const navigate = useNavigate();
+    const toast = useToast();
     
     const fieldLabels = [
         "First Name", "Last Name", "Member ID", "Care Gap", "DOB",
@@ -53,11 +55,11 @@ const InsuranceConfig: React.FC = () => {
                 const data = await response.json();
                 setConfigs(data);
             } else {
-                alert("Failed to fetch configurations");
+                toast.error("Failed to fetch configurations");
             }
         } catch (error) {
             console.error("Error fetching configs:", error);
-            alert("Error connecting to server");
+            toast.error("Error connecting to server");
         } finally {
             setLoading(false);
         }
@@ -76,7 +78,7 @@ const InsuranceConfig: React.FC = () => {
     // Add or Update configuration
     const handleAdd = async () => {
         if (!configName.trim()) {
-            alert("Please enter a configuration name");
+            toast.warning("Please enter a configuration name");
             return;
         }
 
@@ -137,11 +139,11 @@ const InsuranceConfig: React.FC = () => {
                 setEditingId(null);
             } else {
                 const error = await response.json();
-                alert(`Failed to ${editingId ? 'update' : 'add'} configuration: ${error.message}`);
+                toast.error(`Failed to ${editingId ? 'update' : 'add'} configuration: ${error.message}`);
             }
         } catch (error) {
             console.error("Error saving config:", error);
-            alert("Error connecting to server");
+            toast.error("Error connecting to server");
         } finally {
             setLoading(false);
         }
@@ -179,11 +181,11 @@ const InsuranceConfig: React.FC = () => {
                 await fetchConfigs(); // Refresh the list
             } else {
                 const error = await response.json();
-                alert(`Failed to delete configuration: ${error.message}`);
+                toast.error(`Failed to delete configuration: ${error.message}`);
             }
         } catch (error) {
             console.error("Error deleting config:", error);
-            alert("Error connecting to server");
+            toast.error("Error connecting to server");
         } finally {
             setLoading(false);
         }
