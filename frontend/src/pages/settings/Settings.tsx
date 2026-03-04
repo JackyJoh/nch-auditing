@@ -292,7 +292,13 @@ const Settings: React.FC = () => {
                                 />
                                 {gapsFile ? (
                                     <div>
-                                        <p className="text-green-400 font-semibold">✓ {gapsFile.name}</p>
+                                        <div className="flex items-center justify-center gap-2">
+                                            <p className="text-green-400 font-semibold">✓ {gapsFile.name}</p>
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setGapsFile(null); }}
+                                                className="text-white/40 hover:text-red-400 transition-colors leading-none text-lg"
+                                            >×</button>
+                                        </div>
                                         <p className="text-white/60 text-sm mt-1">Click to change</p>
                                     </div>
                                 ) : (

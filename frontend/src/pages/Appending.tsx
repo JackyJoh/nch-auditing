@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../Layout';
 import { FilePreviewButton, FileInfoBadge } from '../components/FilePreviewModal';
 import { useToast } from '../contexts/ToastContext';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 interface InsuranceConfig {
     _id: string;
@@ -112,6 +113,20 @@ const Appending: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['appendingConfigFiles'] });
         },
     });
+
+    const clearMasterFile = () => {
+        setMasterFile(null);
+        localStorage.removeItem('appending_master');
+        localStorage.removeItem('appending_master_name');
+        queryClient.invalidateQueries({ queryKey: ['appendingMasterFile'] });
+    };
+
+    const clearConfigFile = (configId: string) => {
+        handleFileChange(configId, null);
+        localStorage.removeItem(`appending_config_${configId}`);
+        localStorage.removeItem(`appending_config_${configId}_name`);
+        queryClient.invalidateQueries({ queryKey: ['appendingConfigFiles'] });
+    };
 
     // On mount, load master file from localStorage if exists
     useEffect(() => {
@@ -442,7 +457,8 @@ const Appending: React.FC = () => {
 
     return (
         <Layout>
-            <div className="p-4 h-full flex flex-col gap-3">
+            <div className="p-4 h-full flex flex-col gap-3 relative">
+                {loading && <LoadingOverlay message="Appending to Master Sheet..." />}
 
                 {/* Master File Upload - Priority Section */}
                 <div 
@@ -476,7 +492,13 @@ const Appending: React.FC = () => {
                                 />
                                 {masterFile ? (
                                     <div>
-                                        <p className="text-green-400 font-semibold text-sm">✓ {masterFile.name}</p>
+                                        <div className="flex items-center justify-center gap-2">
+                                            <p className="text-green-400 font-semibold text-sm">✓ {masterFile.name}</p>
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearMasterFile(); }}
+                                                className="text-white/40 hover:text-red-400 transition-colors leading-none text-lg"
+                                            >×</button>
+                                        </div>
                                         <FileInfoBadge file={masterFile} />
                                         <p className="text-white/60 text-xs mt-1">Click or drag to change file</p>
                                         <FilePreviewButton file={masterFile} />
@@ -597,7 +619,13 @@ const Appending: React.FC = () => {
                                                         />
                                                         {upload.file ? (
                                                             <div>
-                                                                <p className="text-green-400 font-semibold text-sm">✓ {upload.file.name}</p>
+                                                                <div className="flex items-center justify-center gap-2">
+                                                                    <p className="text-green-400 font-semibold text-sm">✓ {upload.file.name}</p>
+                                                                    <button
+                                                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearConfigFile(upload.configId); }}
+                                                                        className="text-white/40 hover:text-red-400 transition-colors leading-none text-lg"
+                                                                    >×</button>
+                                                                </div>
                                                                 <FileInfoBadge file={upload.file} />
                                                                 <p className="text-white/60 text-xs mt-1">Click or drag to change file</p>
                                                                 <FilePreviewButton file={upload.file} />

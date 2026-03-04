@@ -21,7 +21,7 @@ const Home: React.FC = () => {
               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="text-center text-white p-10 z-10">
                 <h2 className="text-5xl font-extrabold mb-5 tracking-tight">Update Master Gap Sheet</h2>
-                <p className="text-lg opacity-90 max-w-md leading-relaxed">Manage and update your master audit sheet with the latest data.</p>
+                <p className="text-lg opacity-90 max-w-md mx-auto leading-relaxed">Manage and update your master audit sheet with the latest data.</p>
               </div>
             </div>
           </div>
@@ -36,7 +36,7 @@ const Home: React.FC = () => {
               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="text-center text-white p-10 z-10">
                 <h2 className="text-5xl font-extrabold mb-5 tracking-tight">Contacts</h2>
-                <p className="text-lg opacity-90 max-w-md leading-relaxed">View and manage your contacts for auditing.</p>
+                <p className="text-lg opacity-90 max-w-md mx-auto leading-relaxed">View and manage your contacts for auditing.</p>
               </div>
             </div>
           </div>
@@ -51,7 +51,7 @@ const Home: React.FC = () => {
               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="text-center text-white p-10 z-10">
                 <h2 className="text-5xl font-extrabold mb-5 tracking-tight">Sort PDFs</h2>
-                <p className="text-lg opacity-90 max-w-md leading-relaxed">Organize and categorize PDF documents efficiently.</p>
+                <p className="text-lg opacity-90 max-w-md mx-auto leading-relaxed">Organize and categorize PDF documents efficiently.</p>
               </div>
             </div>
           </div>
@@ -66,7 +66,7 @@ const Home: React.FC = () => {
               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="text-center text-white p-10 z-10">
                 <h2 className="text-5xl font-extrabold mb-5 tracking-tight">Settings</h2>
-                <p className="text-lg opacity-90 max-w-md leading-relaxed">Configure your application preferences and options.</p>
+                <p className="text-lg opacity-90 max-w-md mx-auto leading-relaxed">Configure your application preferences and options.</p>
               </div>
             </div>
           </div>

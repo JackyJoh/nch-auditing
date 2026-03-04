@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FilePreviewButton, FileInfoBadge } from '../components/FilePreviewModal';
 import { useToast } from '../contexts/ToastContext';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 const Sorting: React.FC = () => {
     const navigate = useNavigate();
@@ -79,6 +80,20 @@ const Sorting: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['sortingZipFile'] });
         },
     });
+
+    const clearMasterFile = () => {
+        setMasterFile(null);
+        localStorage.removeItem('sorting_master');
+        localStorage.removeItem('sorting_master_name');
+        queryClient.invalidateQueries({ queryKey: ['sortingMasterFile'] });
+    };
+
+    const clearZipFile = () => {
+        setZipFile(null);
+        localStorage.removeItem('sorting_zip');
+        localStorage.removeItem('sorting_zip_name');
+        queryClient.invalidateQueries({ queryKey: ['sortingZipFile'] });
+    };
 
     // On mount, load master file from localStorage if exists
     useEffect(() => {
@@ -246,7 +261,8 @@ const Sorting: React.FC = () => {
 
     return (
         <Layout>
-            <div className="p-4 h-full flex flex-col gap-3">
+            <div className="p-4 h-full flex flex-col gap-3 relative">
+                {loading && <LoadingOverlay message="Sorting PDFs..." />}
                 {/* Master File Upload */}
                 <div className="bg-slate-700/60 backdrop-blur-sm border-2 border-indigo-500/50 rounded-xl shadow-lg p-4">
                     <h2 className="text-white text-lg font-bold mb-2">Master File (Required)</h2>
@@ -279,7 +295,13 @@ const Sorting: React.FC = () => {
                                 />
                                 {masterFile ? (
                                     <div>
-                                        <p className="text-green-400 font-semibold text-sm">✓ {masterFile.name}</p>
+                                        <div className="flex items-center justify-center gap-2">
+                                            <p className="text-green-400 font-semibold text-sm">✓ {masterFile.name}</p>
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearMasterFile(); }}
+                                                className="text-white/40 hover:text-red-400 transition-colors leading-none text-lg"
+                                            >×</button>
+                                        </div>
                                         <FileInfoBadge file={masterFile} />
                                         <p className="text-white/60 text-xs mt-1">Click or drag to change file</p>
                                         <FilePreviewButton file={masterFile} />
@@ -324,7 +346,13 @@ const Sorting: React.FC = () => {
                             />
                             {zipFile ? (
                                 <div>
-                                    <p className="text-green-400 font-semibold text-lg">✓ {zipFile.name}</p>
+                                    <div className="flex items-center justify-center gap-2">
+                                        <p className="text-green-400 font-semibold text-lg">✓ {zipFile.name}</p>
+                                        <button
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearZipFile(); }}
+                                            className="text-white/40 hover:text-red-400 transition-colors leading-none text-xl"
+                                        >×</button>
+                                    </div>
                                     <FileInfoBadge file={zipFile} />
                                     <p className="text-white/60 text-sm mt-2">Click or drag to change ZIP file</p>
                                 </div>

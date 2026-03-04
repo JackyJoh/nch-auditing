@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Layout from '../Layout';
 import { FilePreviewButton, FileInfoBadge } from '../components/FilePreviewModal';
 import { useToast } from '../contexts/ToastContext';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 const Contacts = () => {
     const toast = useToast();
@@ -114,6 +115,14 @@ const Contacts = () => {
         }
     }, [savedFile]);
 
+    const clearFile = () => {
+        setFile(null);
+        setFileName('');
+        localStorage.removeItem('contactsFile');
+        localStorage.removeItem('contactsFileName');
+        queryClient.invalidateQueries({ queryKey: ['contactsFile'] });
+    };
+
     
 
 
@@ -168,7 +177,8 @@ const Contacts = () => {
 
     return (
         <Layout>
-            <div className="p-4 h-full min-h-screen flex flex-col">
+            <div className="p-4 h-full min-h-screen flex flex-col relative">
+                {loading && <LoadingOverlay message="Generating VCF..." />}
                 <div className="mb-6">
                     <h1 className="text-white text-4xl font-bold mb-3">Contacts VCF Generator</h1>
                     <p className="text-white/60 text-lg">
@@ -213,7 +223,13 @@ const Contacts = () => {
                                     />
                                     {file ? (
                                         <div>
-                                            <p className="text-green-400 font-semibold">✓ {fileName}</p>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <p className="text-green-400 font-semibold">✓ {fileName}</p>
+                                                <button
+                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearFile(); }}
+                                                    className="text-white/40 hover:text-red-400 transition-colors leading-none text-lg"
+                                                >×</button>
+                                            </div>
                                             <FileInfoBadge file={file} />
                                             <p className="text-white/60 text-sm mt-1">Click or drag to change</p>
                                             <FilePreviewButton file={file} />
