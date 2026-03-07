@@ -9,8 +9,8 @@ const Contacts = () => {
     const toast = useToast();
     const [file, setFile] = useState<File | null>(null);
     const [fileName, setFileName] = useState<string>('');
-    const [contactHeader, setContactHeader] = useState('');
-    const [phoneHeader, setPhoneHeader] = useState('');
+    const [contactHeader, setContactHeader] = useState(() => localStorage.getItem('contacts_contactHeader') || '');
+    const [phoneHeader, setPhoneHeader] = useState(() => localStorage.getItem('contacts_phoneHeader') || '');
     const [loading, setLoading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
@@ -258,7 +258,7 @@ const Contacts = () => {
                                     name="contactHeader"
                                     type="text"
                                     value={contactHeader}
-                                    onChange={e => setContactHeader(e.target.value)}
+                                    onChange={e => { setContactHeader(e.target.value); localStorage.setItem('contacts_contactHeader', e.target.value); }}
                                     placeholder="Physician Name"
                                     className="block w-full text-white bg-slate-900/40 border border-slate-600/50 rounded-lg px-4 py-2"
                                 />
@@ -273,7 +273,7 @@ const Contacts = () => {
                                     name="phoneHeader"
                                     type="text"
                                     value={phoneHeader}
-                                    onChange={e => setPhoneHeader(e.target.value)}
+                                    onChange={e => { setPhoneHeader(e.target.value); localStorage.setItem('contacts_phoneHeader', e.target.value); }}
                                     placeholder="Provider Phone"
                                     className="block w-full text-white bg-slate-900/40 border border-slate-600/50 rounded-lg px-4 py-2"
                                 />

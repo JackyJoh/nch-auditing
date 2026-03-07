@@ -244,11 +244,12 @@ const Appending: React.FC = () => {
             const config = configs.find(c => c._id === configId);
             // Check if there's a saved file for this config
             const savedFile = savedConfigFiles?.[configId] || null;
+            const savedNotesHeader = localStorage.getItem(`appending_notes_${configId}`) || '';
             return existingUpload || {
                 configId,
                 configName: config?.name || '',
                 file: savedFile,
-                notesHeader: ''
+                notesHeader: savedNotesHeader
             };
         });
         setFileUploads(newUploads);
@@ -281,13 +282,14 @@ const Appending: React.FC = () => {
     };
 
     const handleNotesHeaderChange = (configId: string, notesHeader: string) => {
-        setFileUploads(prev => 
-            prev.map(upload => 
-                upload.configId === configId 
+        setFileUploads(prev =>
+            prev.map(upload =>
+                upload.configId === configId
                     ? { ...upload, notesHeader }
                     : upload
             )
         );
+        localStorage.setItem(`appending_notes_${configId}`, notesHeader);
     };
 
     // Drag and drop handlers for master file
