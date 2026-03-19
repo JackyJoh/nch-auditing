@@ -433,7 +433,7 @@ const Appending: React.FC = () => {
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'merged_care_gaps.xlsx';
+                a.download = `merged_care_gaps_${new Date().toISOString().slice(0, 10)}.xlsx`;
                 document.body.appendChild(a);
                 a.click();
                 
@@ -544,9 +544,24 @@ const Appending: React.FC = () => {
 
                 {/* Insurance Config Selection */}
                 <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4">
-                    <h2 className="text-white text-lg font-bold mb-2">Select Insurance Configurations</h2>
+                    <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-white text-lg font-bold">Select Insurance Configurations</h2>
+                        {configs.length > 0 && (
+                            <button
+                                onClick={() => {
+                                    const allSelected = configs.every(c => selectedConfigs.includes(c._id));
+                                    const newSelection = allSelected ? [] : configs.map(c => c._id);
+                                    setSelectedConfigs(newSelection);
+                                    saveSelectedConfigsMutation.mutate(newSelection);
+                                }}
+                                className="text-xs text-indigo-300 hover:text-indigo-100 transition-colors"
+                            >
+                                {configs.every(c => selectedConfigs.includes(c._id)) ? 'Deselect All' : 'Select All'}
+                            </button>
+                        )}
+                    </div>
                     <p className="text-white/70 text-xs mb-3">Choose which insurance configurations you want to process.</p>
-                    
+
                     {configs.length === 0 ? (
                         <div className="text-white/50 text-center py-6">
                             <p className="text-sm">No insurance configurations found.</p>

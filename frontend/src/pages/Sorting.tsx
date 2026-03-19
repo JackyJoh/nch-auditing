@@ -235,7 +235,7 @@ const Sorting: React.FC = () => {
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'sorted_pdfs.zip';
+                a.download = `sorted_pdfs_${new Date().toISOString().slice(0, 10)}.zip`;
                 document.body.appendChild(a);
                 a.click();
                 
