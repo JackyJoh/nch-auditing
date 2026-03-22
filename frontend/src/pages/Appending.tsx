@@ -588,7 +588,18 @@ const Appending: React.FC = () => {
 
                 {/* File Upload Sections for Selected Configs */}
                 <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 overflow-hidden flex flex-col">
-                    <h2 className="text-white text-lg font-bold mb-2">Upload Care Gap Sheets</h2>
+                    <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-white text-lg font-bold">Upload Care Gap Sheets</h2>
+                        {fileUploads.length > 0 && (
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                fileUploads.every(u => u.file)
+                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                    : 'bg-slate-600/60 text-white/50 border border-slate-500/30'
+                            }`}>
+                                {fileUploads.filter(u => u.file).length} / {fileUploads.length} ready
+                            </span>
+                        )}
+                    </div>
                     <p className="text-white/70 text-xs mb-3">Upload the care gap sheet for each selected configuration.</p>
                     
                     <div className="flex-1 overflow-auto">
