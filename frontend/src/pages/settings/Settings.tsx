@@ -22,6 +22,7 @@ const Settings: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [filterType, setFilterType] = useState<string>('all');
     const [filterDate, setFilterDate] = useState<string>('all');
+    const [searchQuery, setSearchQuery] = useState<string>('');
 
     const {data : gapsFileInfo} = useQuery ({
         queryKey: ['gapsFileInfo'],
@@ -373,17 +374,30 @@ const Settings: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                    <div className="mb-3">
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search activity..."
+                            className="w-full bg-slate-800/70 border border-slate-600/50 text-white text-sm rounded-lg px-3 py-1.5 placeholder-white/30 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                        />
+                    </div>
                     <div className="flex-1 overflow-y-auto pr-2 history-scrollbar" style={{
                         scrollbarWidth: 'thin',
                         scrollbarColor: 'rgb(148 163 184) rgb(51 65 85 / 0.3)'
                     }}>
-                        {history.length === 0 ? (
+                        {(() => {
+                            const filtered = history.filter(item =>
+                                !searchQuery || item.description.toLowerCase().includes(searchQuery.toLowerCase())
+                            );
+                            return filtered.length === 0 ? (
                             <div className="text-white/50 text-center py-12">
-                                <p>No recent activity to display</p>    
+                                <p>{history.length === 0 ? 'No recent activity to display' : 'No results match your search'}</p>
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {history.map((item) => (
+                                {filtered.map((item) => (
                                     <div
                                         key={item._id}
                                         className="bg-slate-800/40 border border-slate-600/30 rounded-lg p-4 hover:bg-slate-800/60 transition-all duration-200"
@@ -421,7 +435,8 @@ const Settings: React.FC = () => {
                                     </div>
                                 ))}
                             </div>
-                        )}
+                        );
+                        })()}
                     </div>
                 </div>
             </div>
