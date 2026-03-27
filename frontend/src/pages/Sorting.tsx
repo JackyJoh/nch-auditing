@@ -95,6 +95,11 @@ const Sorting: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['sortingZipFile'] });
     };
 
+    const clearAllFiles = () => {
+        clearMasterFile();
+        clearZipFile();
+    };
+
     // On mount, load master file from localStorage if exists
     useEffect(() => {
         if (savedMasterFile) {
@@ -369,18 +374,22 @@ const Sorting: React.FC = () => {
                 </div>
 
                 {/* Sort Button */}
-                <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4">
+                <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 flex gap-3">
                     <button
                         onClick={handleSort}
                         disabled={!masterFile || !zipFile || loading}
-                        className="w-full bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? "Processing..." : "Sort PDFs"}
                     </button>
-                    {(!masterFile || !zipFile) && (
-                        <p className="text-white/60 text-xs text-center mt-2">
-                            {!masterFile ? "Please upload a master file" : "Please upload a ZIP file containing PDFs"}
-                        </p>
+                    {(masterFile || zipFile) && (
+                        <button
+                            onClick={clearAllFiles}
+                            disabled={loading}
+                            className="bg-slate-600/60 hover:bg-red-500/20 border border-slate-500/50 hover:border-red-500/50 text-white/50 hover:text-red-400 text-sm font-medium px-4 py-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Clear All
+                        </button>
                     )}
                 </div>
             </div>

@@ -128,6 +128,11 @@ const Appending: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['appendingConfigFiles'] });
     };
 
+    const clearAllFiles = () => {
+        clearMasterFile();
+        fileUploads.forEach(u => clearConfigFile(u.configId));
+    };
+
     // On mount, load master file from localStorage if exists
     useEffect(() => {
         if (savedMasterFile) {
@@ -692,18 +697,22 @@ const Appending: React.FC = () => {
                 </div>
 
                 {/* Append Button */}
-                <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4">
+                <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 flex gap-3">
                     <button
                         onClick={handleAppend}
                         disabled={!masterFile || fileUploads.length === 0 || fileUploads.some(u => !u.file) || loading}
-                        className="w-full bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? "Processing..." : "Append to Master Sheet"}
                     </button>
-                    {(!masterFile || fileUploads.some(u => !u.file)) && (
-                        <p className="text-white/60 text-xs text-center mt-2">
-                            {!masterFile ? "Please upload a master file" : "Please upload all care gap sheets"}
-                        </p>
+                    {(masterFile || fileUploads.some(u => u.file)) && (
+                        <button
+                            onClick={clearAllFiles}
+                            disabled={loading}
+                            className="bg-slate-600/60 hover:bg-red-500/20 border border-slate-500/50 hover:border-red-500/50 text-white/50 hover:text-red-400 text-sm font-medium px-4 py-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Clear All
+                        </button>
                     )}
                 </div>
             </div>

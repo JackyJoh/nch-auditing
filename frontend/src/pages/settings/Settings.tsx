@@ -374,14 +374,22 @@ const Settings: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="mb-3">
+                    <div className="mb-3 flex items-center gap-3">
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search activity..."
-                            className="w-full bg-slate-800/70 border border-slate-600/50 text-white text-sm rounded-lg px-3 py-1.5 placeholder-white/30 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                            className="flex-1 bg-slate-800/70 border border-slate-600/50 text-white text-sm rounded-lg px-3 py-1.5 placeholder-white/30 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
                         />
+                        {history.length > 0 && (
+                            <span className="text-white/40 text-xs whitespace-nowrap">
+                                {(() => {
+                                    const count = history.filter(item => !searchQuery || item.description.toLowerCase().includes(searchQuery.toLowerCase())).length;
+                                    return count === history.length ? `${history.length} results` : `${count} of ${history.length}`;
+                                })()}
+                            </span>
+                        )}
                     </div>
                     <div className="flex-1 overflow-y-auto pr-2 history-scrollbar" style={{
                         scrollbarWidth: 'thin',
