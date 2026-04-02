@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../Layout';
 import { FilePreviewButton, FileInfoBadge } from '../components/FilePreviewModal';
 import { useToast } from '../contexts/ToastContext';
@@ -21,6 +22,7 @@ interface FileUpload {
 const Appending: React.FC = () => {
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000";
     const toast = useToast();
+    const navigate = useNavigate();
     
     const [configs, setConfigs] = useState<InsuranceConfig[]>([]);
     const [selectedConfigs, setSelectedConfigs] = useState<string[]>([]);
@@ -570,7 +572,12 @@ const Appending: React.FC = () => {
                     {configs.length === 0 ? (
                         <div className="text-white/50 text-center py-6">
                             <p className="text-sm">No insurance configurations found.</p>
-                            <p className="text-xs mt-1">Create configurations in Settings first.</p>
+                            <button
+                                onClick={() => navigate('/settings')}
+                                className="text-xs mt-1 text-indigo-400 hover:text-indigo-300 transition-colors underline underline-offset-2"
+                            >
+                                Create configurations in Settings →
+                            </button>
                         </div>
                     ) : (
                         <div className="flex flex-wrap gap-3">
