@@ -62,6 +62,18 @@ const Contacts = () => {
         }
     };
 
+    const fileAge = (file: File): string => {
+        const diff = Date.now() - file.lastModified;
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 1) return 'just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        if (days < 7) return `${days}d ago`;
+        return new Date(file.lastModified).toLocaleDateString();
+    };
+
     // Save file to localStorage as base64 string
     const saveFileToLocalStorage = async (file: File) => {
         return new Promise<void>((resolve, reject) => {
@@ -69,6 +81,7 @@ const Contacts = () => {
             reader.onload = () => {
                 localStorage.setItem('contactsFile', reader.result as string);
                 localStorage.setItem('contactsFileName', file.name);
+                localStorage.setItem('contactsFileLastModified', file.lastModified.toString());
                 resolve();
             };
             reader.onerror = reject;
@@ -80,6 +93,7 @@ const Contacts = () => {
     const loadFileFromLocalStorage = () => {
         const base64 = localStorage.getItem('contactsFile');
         const name = localStorage.getItem('contactsFileName') || '';
+        const lastModified = parseInt(localStorage.getItem('contactsFileLastModified') || '0') || Date.now();
         if (!base64) return null;
         const arr = base64.split(',');
         const mime = arr[0].match(/:(.*?);/)?.[1] || '';
@@ -89,7 +103,7 @@ const Contacts = () => {
         while (n--) {
             u8arr[n] = bstr.charCodeAt(n);
         }
-        return new File([u8arr], name, { type: mime });
+        return new File([u8arr], name, { type: mime, lastModified });
     };
 
     // React Query for loading file
@@ -115,11 +129,22 @@ const Contacts = () => {
         }
     }, [savedFile]);
 
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key === 'Enter' && file && contactHeader && phoneHeader && !loading) {
+                handleGenerateVCF();
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [file, contactHeader, phoneHeader, loading]);
+
     const clearFile = () => {
         setFile(null);
         setFileName('');
         localStorage.removeItem('contactsFile');
         localStorage.removeItem('contactsFileName');
+        localStorage.removeItem('contactsFileLastModified');
         queryClient.invalidateQueries({ queryKey: ['contactsFile'] });
     };
 
@@ -224,7 +249,7 @@ const Contacts = () => {
                                     {file ? (
                                         <div>
                                             <div className="flex items-center justify-center gap-2">
-                                                <p className="text-green-400 font-semibold">✓ {fileName}</p>
+                                                <p className="text-green-400 font-semibold">✓ {fileName} <span className="text-white/40 font-normal text-xs">· {fileAge(file)}</span></p>
                                                 <button
                                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearFile(); }}
                                                     className="text-white/40 hover:text-red-400 transition-colors leading-none text-lg"
@@ -285,7 +310,7 @@ const Contacts = () => {
                                 disabled={!file || !contactHeader || !phoneHeader || loading}
                                 onClick={handleGenerateVCF}
                             >
-                                {loading ? 'Processing...' : 'Generate VCF File'}
+                                {loading ? 'Processing...' : <span>Generate VCF File <span className="text-white/40 font-normal text-xs ml-1">Ctrl+Enter</span></span>}
                             </button>
                             {!file && (
                                 <span className="text-white/60 text-xs text-center mt-2">

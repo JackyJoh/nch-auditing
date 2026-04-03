@@ -35,6 +35,18 @@ const Appending: React.FC = () => {
 
     const queryClient = useQueryClient();
 
+    const fileAge = (file: File): string => {
+        const diff = Date.now() - file.lastModified;
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 1) return 'just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        if (days < 7) return `${days}d ago`;
+        return new Date(file.lastModified).toLocaleDateString();
+    };
+
     // Save file to localStorage as base64 string
     const saveFileToLocalStorage = async (key: string, file: File) => {
         return new Promise<void>((resolve, reject) => {
@@ -42,6 +54,7 @@ const Appending: React.FC = () => {
             reader.onload = () => {
                 localStorage.setItem(key, reader.result as string);
                 localStorage.setItem(`${key}_name`, file.name);
+                localStorage.setItem(`${key}_lastModified`, file.lastModified.toString());
                 resolve();
             };
             reader.onerror = reject;
@@ -53,6 +66,7 @@ const Appending: React.FC = () => {
     const loadFileFromLocalStorage = (key: string): File | null => {
         const base64 = localStorage.getItem(key);
         const name = localStorage.getItem(`${key}_name`) || '';
+        const lastModified = parseInt(localStorage.getItem(`${key}_lastModified`) || '0') || Date.now();
         if (!base64) return null;
         try {
             const arr = base64.split(',');
@@ -63,7 +77,7 @@ const Appending: React.FC = () => {
             while (n--) {
                 u8arr[n] = bstr.charCodeAt(n);
             }
-            return new File([u8arr], name, { type: mime });
+            return new File([u8arr], name, { type: mime, lastModified });
         } catch (error) {
             console.error('Error loading file from localStorage:', error);
             return null;
@@ -243,6 +257,17 @@ const Appending: React.FC = () => {
             setEnableToBeRemoved(savedEnableToBeRemoved);
         }
     }, [savedEnableToBeRemoved]);
+
+    useEffect(() => {
+        const canSubmit = masterFile && fileUploads.length > 0 && fileUploads.every(u => u.file) && !loading;
+        const handler = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key === 'Enter' && canSubmit) {
+                handleAppend();
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [masterFile, fileUploads, loading]);
 
     // Update file uploads when selected configs change
     useEffect(() => {
@@ -502,7 +527,7 @@ const Appending: React.FC = () => {
                                 {masterFile ? (
                                     <div>
                                         <div className="flex items-center justify-center gap-2">
-                                            <p className="text-green-400 font-semibold text-sm">✓ {masterFile.name}</p>
+                                            <p className="text-green-400 font-semibold text-sm">✓ {masterFile.name} <span className="text-white/40 font-normal text-xs">· {fileAge(masterFile)}</span></p>
                                             <button
                                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearMasterFile(); }}
                                                 className="text-white/40 hover:text-red-400 transition-colors leading-none text-lg"
@@ -660,7 +685,7 @@ const Appending: React.FC = () => {
                                                         {upload.file ? (
                                                             <div>
                                                                 <div className="flex items-center justify-center gap-2">
-                                                                    <p className="text-green-400 font-semibold text-sm">✓ {upload.file.name}</p>
+                                                                    <p className="text-green-400 font-semibold text-sm">✓ {upload.file.name} <span className="text-white/40 font-normal text-xs">· {fileAge(upload.file)}</span></p>
                                                                     <button
                                                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); clearConfigFile(upload.configId); }}
                                                                         className="text-white/40 hover:text-red-400 transition-colors leading-none text-lg"
@@ -710,7 +735,7 @@ const Appending: React.FC = () => {
                         disabled={!masterFile || fileUploads.length === 0 || fileUploads.some(u => !u.file) || loading}
                         className="flex-1 bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {loading ? "Processing..." : "Append to Master Sheet"}
+                        {loading ? "Processing..." : <span>Append to Master Sheet <span className="text-white/40 font-normal text-xs ml-1">Ctrl+Enter</span></span>}
                     </button>
                     {(masterFile || fileUploads.some(u => u.file)) && (
                         <button
