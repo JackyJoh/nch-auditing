@@ -13,6 +13,7 @@ const Contacts = () => {
     const [phoneHeader, setPhoneHeader] = useState(() => localStorage.getItem('contacts_phoneHeader') || '');
     const [loading, setLoading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [showValidation, setShowValidation] = useState(false);
 
     // Get API base URL from environment variable, fallback to empty string for local development
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
@@ -131,7 +132,7 @@ const Contacts = () => {
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            if (e.ctrlKey && e.key === 'Enter' && file && contactHeader && phoneHeader && !loading) {
+            if (e.ctrlKey && e.key === 'Enter' && !loading) {
                 handleGenerateVCF();
             }
         };
@@ -153,7 +154,11 @@ const Contacts = () => {
 
     // Example handler for backend call
     const handleGenerateVCF = async () => {
-        if (!file || !contactHeader || !phoneHeader) return;
+        if (!file || !contactHeader || !phoneHeader) {
+            setShowValidation(true);
+            return;
+        }
+        setShowValidation(false);
         setLoading(true);
         const formData = new FormData();
         formData.append('contactSheet', file);
@@ -212,7 +217,7 @@ const Contacts = () => {
                 </div>
                 <div className="flex flex-col gap-4 flex-1 h-full">
                     <div className="flex flex-col justify-center h-1/2">
-                        <div className="transition-all duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-6 flex flex-col h-full">
+                        <div className="transition-colors duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-6 flex flex-col h-full">
                             <div className="text-center mb-4">
                                 <h2 className="text-3xl font-extrabold mb-3 tracking-tight text-white">Upload Contact Sheet</h2>
                                 <p className="text-base opacity-90 leading-relaxed text-white/90">
@@ -227,12 +232,14 @@ const Contacts = () => {
                                 onDragOver={handleDragOver}
                                 onDrop={handleDrop}
                             >
-                                <div className={`w-full border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 ${
+                                <div className={`w-full border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 ${
                                     isDragging
                                         ? 'border-indigo-400 bg-indigo-500/20'
                                         : file
                                             ? 'border-green-500/50 bg-green-500/10'
-                                            : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50'
+                                            : showValidation
+                                                ? 'border-red-500/60 bg-red-500/10'
+                                                : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50'
                                 }`}>
                                     <input
                                         type="file"
@@ -269,10 +276,11 @@ const Contacts = () => {
                                     )}
                                 </div>
                             </label>
+                            {showValidation && !file && <p className="text-red-400 text-xs mt-1 text-center">Required</p>}
                         </div>
                     </div>
                     <div className="flex flex-col justify-center h-1/2">
-                        <div className="transition-all duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-6 flex flex-col h-full justify-center">
+                        <div className="transition-colors duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-6 flex flex-col h-full justify-center">
                             {/* Contact Name Column Header Input */}
                             <div className="mb-6">
                                 <label className="block text-white font-semibold mb-1" htmlFor="contactHeader">
@@ -285,8 +293,9 @@ const Contacts = () => {
                                     value={contactHeader}
                                     onChange={e => { setContactHeader(e.target.value); localStorage.setItem('contacts_contactHeader', e.target.value); }}
                                     placeholder="Physician Name"
-                                    className="block w-full text-white bg-slate-900/40 border border-slate-600/50 rounded-lg px-4 py-2"
+                                    className={`block w-full text-white bg-slate-900/40 border rounded-lg px-4 py-2 ${showValidation && !contactHeader ? 'border-red-500/60' : 'border-slate-600/50'}`}
                                 />
+                                {showValidation && !contactHeader && <p className="text-red-400 text-xs mt-1">Required</p>}
                             </div>
                             {/* Phone Number Column Header Input */}
                             <div className="mb-6">
@@ -300,14 +309,15 @@ const Contacts = () => {
                                     value={phoneHeader}
                                     onChange={e => { setPhoneHeader(e.target.value); localStorage.setItem('contacts_phoneHeader', e.target.value); }}
                                     placeholder="Provider Phone"
-                                    className="block w-full text-white bg-slate-900/40 border border-slate-600/50 rounded-lg px-4 py-2"
+                                    className={`block w-full text-white bg-slate-900/40 border rounded-lg px-4 py-2 ${showValidation && !phoneHeader ? 'border-red-500/60' : 'border-slate-600/50'}`}
                                 />
+                                {showValidation && !phoneHeader && <p className="text-red-400 text-xs mt-1">Required</p>}
                             </div>
                         </div>
-                        <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 mt-4 w-full flex flex-col items-center">
+                        <div className="bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-4 mt-4 w-full flex flex-col items-center">
                             <button
-                                className="w-full bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={!file || !contactHeader || !phoneHeader || loading}
+                                className="w-full bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-colors duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={loading}
                                 onClick={handleGenerateVCF}
                             >
                                 {loading ? 'Processing...' : <span>Generate VCF File <span className="text-white/40 font-normal text-xs ml-1">Ctrl+Enter</span></span>}

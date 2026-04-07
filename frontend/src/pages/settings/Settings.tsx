@@ -259,7 +259,7 @@ const Settings: React.FC = () => {
 
                 {/* Two Column Grid */}
                 <div className="grid grid-cols-2 gap-4 mb-4" style={{ height: '40%' }}>
-                    <div className="cursor-pointer transition-all duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 active:scale-[0.99] group rounded-xl shadow-lg flex items-center justify-center"
+                    <div className="cursor-pointer transition-colors duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 active:scale-[0.99] group rounded-xl shadow-lg flex items-center justify-center"
                     onClick={() => navigate('/settings/insurance-config')}>
                         <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                         <div className="text-center text-white p-10 z-10">
@@ -267,7 +267,7 @@ const Settings: React.FC = () => {
                             <p className="text-base opacity-90 leading-relaxed">Manage insurance configurations and settings</p>
                         </div>
                     </div>
-                    <div className="transition-all duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-6 flex flex-col">
+                    <div className="transition-colors duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-6 flex flex-col">
                         <div className="text-center mb-4">
                             <h2 className="text-4xl font-extrabold mb-3 tracking-tight text-white">Gap Name Keys</h2>
                             <p className="text-base opacity-90 leading-relaxed text-white/90">Upload the care gap name key file</p>
@@ -280,7 +280,7 @@ const Settings: React.FC = () => {
                         )}
                         
                         <label className="cursor-pointer flex-1 flex items-center justify-center mb-3">
-                            <div className={`w-full border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 ${
+                            <div className={`w-full border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 ${
                                 gapsFile 
                                     ? 'border-green-500/50 bg-green-500/10' 
                                     : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50'
@@ -314,7 +314,7 @@ const Settings: React.FC = () => {
                         <button
                             onClick={handleGapsFileUpload}
                             disabled={!gapsFile || loading}
-                            className="bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-semibold px-6 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                            className="bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-semibold px-6 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                         >
                             {loading ? "Uploading..." : "Upload File"}
                         </button>
@@ -322,14 +322,14 @@ const Settings: React.FC = () => {
                 </div>
 
                 {/* History Section */}
-                <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-6 overflow-hidden flex flex-col">
+                <div className="flex-1 bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-6 overflow-hidden flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-white text-2xl font-bold">Recent Activity</h3>
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={handleExportCSV}
                                 disabled={history.length === 0}
-                                className="flex items-center gap-1.5 bg-slate-800/70 border border-slate-600/50 hover:bg-slate-700/70 hover:border-slate-500/50 text-white/80 hover:text-white text-sm font-medium px-3 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                                className="flex items-center gap-1.5 bg-slate-800/70 border border-slate-600/50 hover:bg-slate-700/70 hover:border-slate-500/50 text-white/80 hover:text-white text-sm font-medium px-3 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-200"
                                 title="Export current view as CSV"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -408,7 +408,7 @@ const Settings: React.FC = () => {
                                 {filtered.map((item) => (
                                     <div
                                         key={item._id}
-                                        className="bg-slate-800/40 border border-slate-600/30 rounded-lg p-4 hover:bg-slate-800/60 transition-all duration-200"
+                                        className="bg-slate-800/40 border border-slate-600/30 rounded-lg p-4 hover:bg-slate-800/60 transition-colors duration-200"
                                     >
                                         <div className="flex items-start gap-4">
                                             <div className="flex-shrink-0 w-10 h-10 rounded-lg border flex items-center justify-center text-xl bg-slate-600/20 border-slate-500/50 text-slate-300">

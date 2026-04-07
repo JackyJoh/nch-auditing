@@ -32,6 +32,7 @@ const Appending: React.FC = () => {
     const [enableToBeRemoved, setEnableToBeRemoved] = useState(false);
     const [isDraggingMaster, setIsDraggingMaster] = useState(false);
     const [draggingConfigId, setDraggingConfigId] = useState<string | null>(null);
+    const [showValidation, setShowValidation] = useState(false);
 
     const queryClient = useQueryClient();
 
@@ -259,15 +260,14 @@ const Appending: React.FC = () => {
     }, [savedEnableToBeRemoved]);
 
     useEffect(() => {
-        const canSubmit = masterFile && fileUploads.length > 0 && fileUploads.every(u => u.file) && !loading;
         const handler = (e: KeyboardEvent) => {
-            if (e.ctrlKey && e.key === 'Enter' && canSubmit) {
+            if (e.ctrlKey && e.key === 'Enter' && !loading) {
                 handleAppend();
             }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [masterFile, fileUploads, loading]);
+    }, [loading]);
 
     // Update file uploads when selected configs change
     useEffect(() => {
@@ -417,9 +417,10 @@ const Appending: React.FC = () => {
 
     const handleAppend = async () => {
         if (!masterFile || fileUploads.length === 0 || fileUploads.some(u => !u.file)) {
-            toast.warning("Please upload all required files");
+            setShowValidation(true);
             return;
         }
+        setShowValidation(false);
 
         setLoading(true);
         try {
@@ -496,7 +497,7 @@ const Appending: React.FC = () => {
 
                 {/* Master File Upload - Priority Section */}
                 <div 
-                    className="bg-slate-700/60 backdrop-blur-sm border-2 border-indigo-500/50 rounded-xl shadow-lg p-4"
+                    className="bg-slate-700/60 border-2 border-indigo-500/50 rounded-xl shadow-lg p-4"
                     onDragEnter={handleMasterDragEnter}
                     onDragLeave={handleMasterDragLeave}
                     onDragOver={handleMasterDragOver}
@@ -507,12 +508,14 @@ const Appending: React.FC = () => {
                     
                     <div className="flex items-center gap-4">
                         <label className="flex-1 cursor-pointer">
-                            <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-all duration-200 ${
+                            <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors duration-200 ${
                                 isDraggingMaster
                                     ? 'border-indigo-400 bg-indigo-500/20'
-                                    : masterFile 
-                                        ? 'border-green-500/50 bg-green-500/10' 
-                                        : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
+                                    : masterFile
+                                        ? 'border-green-500/50 bg-green-500/10'
+                                        : showValidation
+                                            ? 'border-red-500/60 bg-red-500/10'
+                                            : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
                             }`}>
                                 <input
                                     type="file"
@@ -547,6 +550,7 @@ const Appending: React.FC = () => {
                                 )}
                             </div>
                         </label>
+                        {showValidation && !masterFile && <p className="text-red-400 text-xs mt-1 text-center">Required</p>}
                     </div>
 
                     {/* Enable to be removed toggle */}
@@ -563,8 +567,8 @@ const Appending: React.FC = () => {
                                     }}
                                     className="sr-only peer"
                                 />
-                                <div className="w-11 h-6 bg-slate-600/60 rounded-full peer-checked:bg-indigo-600/80 transition-all duration-200 border border-slate-500/50 peer-checked:border-indigo-400/50"></div>
-                                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all duration-200 peer-checked:translate-x-5"></div>
+                                <div className="w-11 h-6 bg-slate-600/60 rounded-full peer-checked:bg-indigo-600/80 transition-colors duration-200 border border-slate-500/50 peer-checked:border-indigo-400/50"></div>
+                                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-colors duration-200 peer-checked:translate-x-5"></div>
                             </div>
                             <div>
                                 <p className="text-white font-semibold text-sm group-hover:text-indigo-300 transition-colors">Enable to be removed?</p>
@@ -575,7 +579,7 @@ const Appending: React.FC = () => {
                 </div>
 
                 {/* Insurance Config Selection */}
-                <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4">
+                <div className="bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                         <h2 className="text-white text-lg font-bold">Select Insurance Configurations</h2>
                         {configs.length > 0 && (
@@ -610,7 +614,7 @@ const Appending: React.FC = () => {
                                 <button
                                     key={config._id}
                                     onClick={() => toggleConfigSelection(config._id)}
-                                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors duration-200 ${
                                         selectedConfigs.includes(config._id)
                                             ? 'bg-indigo-600/80 border-2 border-indigo-400 text-white shadow-lg scale-105'
                                             : 'bg-slate-600/60 border border-slate-500/50 text-white/80 hover:bg-slate-500/60'
@@ -624,7 +628,7 @@ const Appending: React.FC = () => {
                 </div>
 
                 {/* File Upload Sections for Selected Configs */}
-                <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 overflow-hidden flex flex-col">
+                <div className="flex-1 bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-4 overflow-hidden flex flex-col">
                     <div className="flex items-center justify-between mb-2">
                         <h2 className="text-white text-lg font-bold">Upload Care Gap Sheets</h2>
                         {fileUploads.length > 0 && (
@@ -665,12 +669,14 @@ const Appending: React.FC = () => {
                                             {/* Left Column - File Upload */}
                                             <div>
                                                 <label className="cursor-pointer block">
-                                                    <div className={`border-2 border-dashed rounded-lg p-3 text-center transition-all duration-200 ${
+                                                    <div className={`border-2 border-dashed rounded-lg p-3 text-center transition-colors duration-200 ${
                                                         draggingConfigId === upload.configId
                                                             ? 'border-indigo-400 bg-indigo-500/20'
-                                                            : upload.file 
-                                                                ? 'border-green-500/50 bg-green-500/10' 
-                                                                : 'border-slate-500/50 bg-slate-700/50 hover:border-indigo-500/50'
+                                                            : upload.file
+                                                                ? 'border-green-500/50 bg-green-500/10'
+                                                                : showValidation
+                                                                    ? 'border-red-500/60 bg-red-500/10'
+                                                                    : 'border-slate-500/50 bg-slate-700/50 hover:border-indigo-500/50'
                                                     }`}>
                                                         <input
                                                             type="file"
@@ -705,6 +711,7 @@ const Appending: React.FC = () => {
                                                         )}
                                                     </div>
                                                 </label>
+                                                {showValidation && !upload.file && <p className="text-red-400 text-xs mt-1 text-center">Required</p>}
                                             </div>
 
                                             {/* Right Column - Settings */}
@@ -729,11 +736,11 @@ const Appending: React.FC = () => {
                 </div>
 
                 {/* Append Button */}
-                <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 flex gap-3">
+                <div className="bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-4 flex gap-3">
                     <button
                         onClick={handleAppend}
-                        disabled={!masterFile || fileUploads.length === 0 || fileUploads.some(u => !u.file) || loading}
-                        className="flex-1 bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={loading}
+                        className="flex-1 bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-colors duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? "Processing..." : <span>Append to Master Sheet <span className="text-white/40 font-normal text-xs ml-1">Ctrl+Enter</span></span>}
                     </button>
@@ -741,7 +748,7 @@ const Appending: React.FC = () => {
                         <button
                             onClick={clearAllFiles}
                             disabled={loading}
-                            className="bg-slate-600/60 hover:bg-red-500/20 border border-slate-500/50 hover:border-red-500/50 text-white/50 hover:text-red-400 text-sm font-medium px-4 py-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-slate-600/60 hover:bg-red-500/20 border border-slate-500/50 hover:border-red-500/50 text-white/50 hover:text-red-400 text-sm font-medium px-4 py-3 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Clear All
                         </button>

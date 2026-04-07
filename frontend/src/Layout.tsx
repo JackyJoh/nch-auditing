@@ -29,40 +29,40 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="flex h-screen w-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
       {/* Sidebar */}
-      <div className="w-[12.5%] bg-slate-950/50 backdrop-blur-sm border-r border-slate-700/50 flex flex-col p-4">
+      <div className="w-[12.5%] bg-slate-950/50 border-r border-slate-700/50 flex flex-col p-4">
         <div className="mb-8">
           <h1 className="text-white text-2xl font-bold">NCH Auditing</h1>
         </div>
         <nav className="flex flex-col gap-2 flex-1">
-          <Link to="/" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+          <Link to="/" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
             location.pathname === '/' 
               ? 'bg-slate-700/80 text-white border border-slate-500/50' 
               : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}>
             Home
           </Link>
-          <Link to="/sorting" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+          <Link to="/sorting" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
             location.pathname === '/sorting' 
               ? 'bg-slate-700/80 text-white border border-slate-500/50' 
               : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}>
             Sort PDFs
           </Link>
-          <Link to="/appending" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+          <Link to="/appending" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
             location.pathname === '/appending' 
               ? 'bg-slate-700/80 text-white border border-slate-500/50' 
               : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}>
             Master Sheet
           </Link>
-          <Link to="/contacts" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+          <Link to="/contacts" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
             location.pathname === '/contacts'
               ? 'bg-slate-700/80 text-white border border-slate-500/50'
               : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}>
             Contacts
           </Link>
-          <Link to="/settings" className={`text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+          <Link to="/settings" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
             location.pathname.startsWith('/settings')
               ? 'bg-slate-700/80 text-white border border-slate-500/50' 
               : 'text-white/80 hover:text-white hover:bg-white/10'
@@ -87,7 +87,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {showInfoButton && (
           <button
             onClick={downloadInstr}
-            className="fixed top-4 right-4 z-50 w-10 h-10 rounded-lg bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 text-white flex items-center justify-center transition-all duration-200 shadow-lg"
+            className="fixed top-4 right-4 z-50 w-10 h-10 rounded-lg bg-slate-700/60 border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 text-white flex items-center justify-center transition-colors duration-200 shadow-lg"
             title="Information"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

@@ -217,7 +217,7 @@ const InsuranceConfig: React.FC = () => {
                 </div>
 
                 {/* Add Configuration Form */}
-                <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4">
+                <div className="bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-4">
                     <h2 className="text-white text-xl font-bold mb-3">
                         {editingId ? "Edit Configuration" : "Add New Configuration"}
                     </h2>
@@ -258,7 +258,7 @@ const InsuranceConfig: React.FC = () => {
                         <button
                             onClick={handleAdd}
                             disabled={loading}
-                            className="bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-semibold px-4 py-1.5 text-sm rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-semibold px-4 py-1.5 text-sm rounded-lg transition-colors duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? "Processing..." : editingId ? "Update Configuration" : "Add Configuration"}
                         </button>
@@ -266,7 +266,7 @@ const InsuranceConfig: React.FC = () => {
                             <button
                                 onClick={handleCancel}
                                 disabled={loading}
-                                className="bg-slate-600/70 hover:bg-slate-500/70 border border-slate-500/50 text-white font-semibold px-4 py-1.5 text-sm rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="bg-slate-600/70 hover:bg-slate-500/70 border border-slate-500/50 text-white font-semibold px-4 py-1.5 text-sm rounded-lg transition-colors duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 Cancel
                             </button>
@@ -275,7 +275,7 @@ const InsuranceConfig: React.FC = () => {
                 </div>
 
                 {/* Existing Configurations List */}
-                <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 overflow-hidden flex flex-col">
+                <div className="flex-1 bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-4 overflow-hidden flex flex-col">
                     <h2 className="text-white text-xl font-bold mb-3">Existing Configurations</h2>
                     <div className="flex-1 overflow-y-auto space-y-3">
                         {loading ? (
@@ -290,7 +290,7 @@ const InsuranceConfig: React.FC = () => {
                             configs.map((config) => (
                                 <div
                                     key={config._id}
-                                    className="bg-slate-800/60 border border-slate-600/50 rounded-lg p-4 flex items-center justify-between hover:bg-slate-800/80 transition-all duration-200"
+                                    className="bg-slate-800/60 border border-slate-600/50 rounded-lg p-4 flex items-center justify-between hover:bg-slate-800/80 transition-colors duration-200"
                                 >
                                     <div className="flex-1">
                                         <h3 className="text-white font-semibold text-lg mb-2">{config.name}</h3>
@@ -306,14 +306,14 @@ const InsuranceConfig: React.FC = () => {
                                         <button
                                             onClick={() => handleEdit(config)}
                                             disabled={loading}
-                                            className="bg-blue-600/70 hover:bg-blue-500/70 border border-blue-500/50 text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm font-semibold disabled:opacity-50"
+                                            className="bg-blue-600/70 hover:bg-blue-500/70 border border-blue-500/50 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-semibold disabled:opacity-50"
                                         >
                                             Edit
                                         </button>
                                         <button
                                             onClick={() => handleDelete(config._id)}
                                             disabled={loading}
-                                            className="bg-slate-700/80 hover:bg-red-600/70 border border-slate-500/50 hover:border-red-500/50 text-white px-4 py-2 rounded-lg transition-all duration-200 text-sm font-semibold disabled:opacity-50"
+                                            className="bg-slate-700/80 hover:bg-red-600/70 border border-slate-500/50 hover:border-red-500/50 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-semibold disabled:opacity-50"
                                         >
                                             Delete
                                         </button>

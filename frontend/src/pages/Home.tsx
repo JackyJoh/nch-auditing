@@ -57,7 +57,7 @@ const Home: React.FC = () => {
             className="flex flex-col gap-4 flex-1 row-start-1 col-start-1"
           >
             <div 
-              className="flex-1 flex items-center justify-center cursor-pointer transition-all duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 active:scale-[0.99] group rounded-xl shadow-lg"
+              className="flex-1 flex items-center justify-center cursor-pointer transition duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 active:scale-[0.99] group rounded-xl shadow-lg"
               onClick={() => navigate('/appending')}
             >
               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -75,7 +75,7 @@ const Home: React.FC = () => {
             className="flex flex-col gap-4 flex-1 row-start-1 col-start-2"
           >
             <div 
-              className="flex-1 flex items-center justify-center cursor-pointer transition-all duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 active:scale-[0.99] group rounded-xl shadow-lg"
+              className="flex-1 flex items-center justify-center cursor-pointer transition duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 active:scale-[0.99] group rounded-xl shadow-lg"
               onClick={() => navigate('/contacts')}
             >
               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -93,7 +93,7 @@ const Home: React.FC = () => {
             className="flex flex-col gap-4 flex-1 row-start-2 col-start-1"
           >
             <div 
-              className="flex-1 flex items-center justify-center cursor-pointer transition-all duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 active:scale-[0.99] group rounded-xl shadow-lg"
+              className="flex-1 flex items-center justify-center cursor-pointer transition duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 active:scale-[0.99] group rounded-xl shadow-lg"
               onClick={() => navigate('/sorting')}
             >
               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -111,7 +111,7 @@ const Home: React.FC = () => {
             className="flex flex-col gap-4 flex-1 row-start-2 col-start-2"
           >
             <div 
-              className="flex-1 flex items-center justify-center cursor-pointer transition-all duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 active:scale-[0.99] group rounded-xl shadow-lg"
+              className="flex-1 flex items-center justify-center cursor-pointer transition duration-200 ease-in-out relative overflow-hidden bg-slate-700/60 border border-slate-600/50 hover:bg-slate-600/60 hover:border-slate-500/50 active:scale-[0.99] group rounded-xl shadow-lg"
               onClick={() => navigate('/settings')}
             >
               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

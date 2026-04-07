@@ -17,6 +17,7 @@ const Sorting: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [isDraggingMaster, setIsDraggingMaster] = useState(false);
     const [isDraggingZip, setIsDraggingZip] = useState(false);
+    const [showValidation, setShowValidation] = useState(false);
 
     const fileAge = (file: File): string => {
         const diff = Date.now() - file.lastModified;
@@ -130,7 +131,7 @@ const Sorting: React.FC = () => {
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            if (e.ctrlKey && e.key === 'Enter' && masterFile && zipFile && !loading) {
+            if (e.ctrlKey && e.key === 'Enter' && !loading) {
                 handleSort();
             }
         };
@@ -238,9 +239,10 @@ const Sorting: React.FC = () => {
 
     const handleSort = async () => {
         if (!masterFile || !zipFile) {
-            toast.warning("Please upload all required files");
+            setShowValidation(true);
             return;
         }
+        setShowValidation(false);
 
         setLoading(true);
         try {
@@ -293,7 +295,7 @@ const Sorting: React.FC = () => {
             <div className="p-4 h-full flex flex-col gap-3 relative">
                 {loading && <LoadingOverlay message="Sorting PDFs..." />}
                 {/* Master File Upload */}
-                <div className="bg-slate-700/60 backdrop-blur-sm border-2 border-indigo-500/50 rounded-xl shadow-lg p-4">
+                <div className="bg-slate-700/60 border-2 border-indigo-500/50 rounded-xl shadow-lg p-4">
                     <h2 className="text-white text-lg font-bold mb-2">Master File (Required)</h2>
                     <p className="text-white/70 text-xs mb-3">Upload the master care gap sheet that will be used as the key for sorting PDFs.</p>
                     
@@ -305,12 +307,14 @@ const Sorting: React.FC = () => {
                             onDragOver={handleMasterDragOver}
                             onDrop={handleMasterDrop}
                         >
-                            <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-all duration-200 ${
+                            <div className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors duration-200 ${
                                 isDraggingMaster
                                     ? 'border-indigo-400 bg-indigo-500/20'
-                                    : masterFile 
-                                        ? 'border-green-500/50 bg-green-500/10' 
-                                        : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
+                                    : masterFile
+                                        ? 'border-green-500/50 bg-green-500/10'
+                                        : showValidation
+                                            ? 'border-red-500/60 bg-red-500/10'
+                                            : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
                             }`}>
                                 <input
                                     type="file"
@@ -345,11 +349,12 @@ const Sorting: React.FC = () => {
                                 )}
                             </div>
                         </label>
+                        {showValidation && !masterFile && <p className="text-red-400 text-xs mt-1 text-center">Required</p>}
                     </div>
                 </div>
 
                 {/* ZIP File Upload */}
-                <div className="flex-1 bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 overflow-hidden flex flex-col">
+                <div className="flex-1 bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-4 overflow-hidden flex flex-col">
                     <h2 className="text-white text-lg font-bold mb-2">PDF ZIP File (Required)</h2>
                     <p className="text-white/70 text-xs mb-3">Upload a ZIP file containing all PDFs to be sorted.</p>
                     
@@ -360,12 +365,14 @@ const Sorting: React.FC = () => {
                         onDragOver={handleZipDragOver}
                         onDrop={handleZipDrop}
                     >
-                        <div className={`w-full h-full border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 flex items-center justify-center ${
+                        <div className={`w-full h-full border-2 border-dashed rounded-lg p-6 text-center transition-colors duration-200 flex items-center justify-center ${
                             isDraggingZip
                                 ? 'border-indigo-400 bg-indigo-500/20'
                                 : zipFile
-                                    ? 'border-green-500/50 bg-green-500/10' 
-                                    : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
+                                    ? 'border-green-500/50 bg-green-500/10'
+                                    : showValidation
+                                        ? 'border-red-500/60 bg-red-500/10'
+                                        : 'border-slate-500/50 bg-slate-800/50 hover:border-indigo-500/50 hover:bg-slate-700/50'
                         }`}>
                             <input
                                 type="file"
@@ -395,14 +402,15 @@ const Sorting: React.FC = () => {
                             )}
                         </div>
                     </label>
+                    {showValidation && !zipFile && <p className="text-red-400 text-xs mt-1 text-center">Required</p>}
                 </div>
 
                 {/* Sort Button */}
-                <div className="bg-slate-700/60 backdrop-blur-sm border border-slate-600/50 rounded-xl shadow-lg p-4 flex gap-3">
+                <div className="bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-4 flex gap-3">
                     <button
                         onClick={handleSort}
-                        disabled={!masterFile || !zipFile || loading}
-                        className="flex-1 bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={loading}
+                        className="flex-1 bg-indigo-600/70 hover:bg-indigo-500/70 border border-indigo-500/50 text-white font-bold text-base px-6 py-3 rounded-lg transition-colors duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? "Processing..." : <span>Sort PDFs <span className="text-white/40 font-normal text-xs ml-1">Ctrl+Enter</span></span>}
                     </button>
@@ -410,7 +418,7 @@ const Sorting: React.FC = () => {
                         <button
                             onClick={clearAllFiles}
                             disabled={loading}
-                            className="bg-slate-600/60 hover:bg-red-500/20 border border-slate-500/50 hover:border-red-500/50 text-white/50 hover:text-red-400 text-sm font-medium px-4 py-3 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-slate-600/60 hover:bg-red-500/20 border border-slate-500/50 hover:border-red-500/50 text-white/50 hover:text-red-400 text-sm font-medium px-4 py-3 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Clear All
                         </button>
