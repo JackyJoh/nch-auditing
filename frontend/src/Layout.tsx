@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 interface LayoutProps {
@@ -23,6 +23,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     document.body.removeChild(link);
   };
 
+  const [filesDot, setFilesDot] = useState({ sorting: false, appending: false, contacts: false });
+
+  useEffect(() => {
+    setFilesDot({
+      sorting: !!localStorage.getItem('sorting_master'),
+      appending: !!localStorage.getItem('appending_master'),
+      contacts: !!localStorage.getItem('contactsFile'),
+    });
+  }, [location]);
+
   // Show info button on all pages except home and login
   const showInfoButton = location.pathname !== '/' && location.pathname !== '/login';
 
@@ -41,26 +51,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           }`}>
             Home
           </Link>
-          <Link to="/sorting" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-            location.pathname === '/sorting' 
-              ? 'bg-slate-700/80 text-white border border-slate-500/50' 
+          <Link to="/sorting" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 flex items-center justify-between ${
+            location.pathname === '/sorting'
+              ? 'bg-slate-700/80 text-white border border-slate-500/50'
               : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}>
             Sort PDFs
+            {filesDot.sorting && <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />}
           </Link>
-          <Link to="/appending" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-            location.pathname === '/appending' 
-              ? 'bg-slate-700/80 text-white border border-slate-500/50' 
+          <Link to="/appending" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 flex items-center justify-between ${
+            location.pathname === '/appending'
+              ? 'bg-slate-700/80 text-white border border-slate-500/50'
               : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}>
             Master Sheet
+            {filesDot.appending && <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />}
           </Link>
-          <Link to="/contacts" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
+          <Link to="/contacts" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 flex items-center justify-between ${
             location.pathname === '/contacts'
               ? 'bg-slate-700/80 text-white border border-slate-500/50'
               : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}>
             Contacts
+            {filesDot.contacts && <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />}
           </Link>
           <Link to="/settings" className={`text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
             location.pathname.startsWith('/settings')
