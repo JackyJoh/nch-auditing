@@ -19,6 +19,11 @@ const Sorting: React.FC = () => {
     const [isDraggingZip, setIsDraggingZip] = useState(false);
     const [showValidation, setShowValidation] = useState(false);
 
+    const warnIfLarge = (file: File, limitMB: number) => {
+        const sizeMB = file.size / (1024 * 1024);
+        if (sizeMB > limitMB) toast.warning(`${file.name} is ${sizeMB.toFixed(0)}MB — processing may be slow`);
+    };
+
     const fileAge = (file: File): string => {
         const diff = Date.now() - file.lastModified;
         const minutes = Math.floor(diff / 60000);
@@ -144,6 +149,7 @@ const Sorting: React.FC = () => {
             const file = e.target.files[0];
             setZipFile(file); // Only allow one .zip file
             saveZipFileMutation.mutate(file);
+            warnIfLarge(file, 50);
         }
     };
 
@@ -186,6 +192,7 @@ const Sorting: React.FC = () => {
             if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
                 setMasterFile(file);
                 saveMasterFileMutation.mutate(file);
+                warnIfLarge(file, 15);
             } else {
                 toast.warning('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
@@ -231,6 +238,7 @@ const Sorting: React.FC = () => {
             if (fileName.endsWith('.zip')) {
                 setZipFile(file);
                 saveZipFileMutation.mutate(file);
+                warnIfLarge(file, 50);
             } else {
                 toast.warning('Please upload only ZIP (.zip) files');
             }
@@ -322,7 +330,7 @@ const Sorting: React.FC = () => {
                                     onChange={(e) => {
                                         const file = e.target.files?.[0] || null;
                                         setMasterFile(file);
-                                        if (file) saveMasterFileMutation.mutate(file);
+                                        if (file) { saveMasterFileMutation.mutate(file); warnIfLarge(file, 15); }
                                     }}
                                     className="hidden"
                                 />

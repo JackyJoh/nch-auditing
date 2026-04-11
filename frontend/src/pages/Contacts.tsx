@@ -57,10 +57,16 @@ const Contacts = () => {
                 setFile(droppedFile);
                 setFileName(droppedFile.name);
                 saveFileMutation.mutate(droppedFile);
+                warnIfLarge(droppedFile, 15);
             } else {
                 toast.warning('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
         }
+    };
+
+    const warnIfLarge = (file: File, limitMB: number) => {
+        const sizeMB = file.size / (1024 * 1024);
+        if (sizeMB > limitMB) toast.warning(`${file.name} is ${sizeMB.toFixed(0)}MB — processing may be slow`);
     };
 
     const fileAge = (file: File): string => {
@@ -248,7 +254,7 @@ const Contacts = () => {
                                             const f = e.target.files?.[0] || null;
                                             setFile(f);
                                             setFileName(f?.name || '');
-                                            if (f) saveFileMutation.mutate(f);
+                                            if (f) { saveFileMutation.mutate(f); warnIfLarge(f, 15); }
                                         }}
                                         className="hidden"
                                         name="contactSheet"

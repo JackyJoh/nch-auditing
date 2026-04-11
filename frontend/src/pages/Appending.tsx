@@ -36,6 +36,11 @@ const Appending: React.FC = () => {
 
     const queryClient = useQueryClient();
 
+    const warnIfLarge = (file: File, limitMB: number) => {
+        const sizeMB = file.size / (1024 * 1024);
+        if (sizeMB > limitMB) toast.warning(`${file.name} is ${sizeMB.toFixed(0)}MB — processing may be slow`);
+    };
+
     const fileAge = (file: File): string => {
         const diff = Date.now() - file.lastModified;
         const minutes = Math.floor(diff / 60000);
@@ -364,6 +369,7 @@ const Appending: React.FC = () => {
             if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
                 setMasterFile(file);
                 saveMasterFileMutation.mutate(file);
+                warnIfLarge(file, 15);
             } else {
                 toast.warning('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
@@ -409,6 +415,7 @@ const Appending: React.FC = () => {
             if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
                 handleFileChange(configId, file);
                 saveConfigFileMutation.mutate({ configId, file });
+                warnIfLarge(file, 15);
             } else {
                 toast.warning('Please upload only Excel (.xlsx, .xls) or CSV (.csv) files');
             }
@@ -523,7 +530,7 @@ const Appending: React.FC = () => {
                                     onChange={(e) => {
                                         const file = e.target.files?.[0] || null;
                                         setMasterFile(file);
-                                        if (file) saveMasterFileMutation.mutate(file);
+                                        if (file) { saveMasterFileMutation.mutate(file); warnIfLarge(file, 15); }
                                     }}
                                     className="hidden"
                                 />
@@ -684,7 +691,7 @@ const Appending: React.FC = () => {
                                                             onChange={(e) => {
                                                                 const file = e.target.files?.[0] || null;
                                                                 handleFileChange(upload.configId, file);
-                                                                if (file) saveConfigFileMutation.mutate({ configId: upload.configId, file });
+                                                                if (file) { saveConfigFileMutation.mutate({ configId: upload.configId, file }); warnIfLarge(file, 15); }
                                                             }}
                                                             className="hidden"
                                                         />
