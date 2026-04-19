@@ -137,17 +137,23 @@ const Appending: React.FC = () => {
     });
 
     const clearMasterFile = () => {
+        const snapshot = masterFile;
         setMasterFile(null);
         localStorage.removeItem('appending_master');
         localStorage.removeItem('appending_master_name');
+        localStorage.removeItem('appending_master_lastModified');
         queryClient.invalidateQueries({ queryKey: ['appendingMasterFile'] });
+        if (snapshot) toast.info(`${snapshot.name} removed.`, { label: 'Undo', onClick: () => { setMasterFile(snapshot); saveMasterFileMutation.mutate(snapshot); } });
     };
 
     const clearConfigFile = (configId: string) => {
+        const snapshot = fileUploads.find(u => u.configId === configId)?.file ?? null;
         handleFileChange(configId, null);
         localStorage.removeItem(`appending_config_${configId}`);
         localStorage.removeItem(`appending_config_${configId}_name`);
+        localStorage.removeItem(`appending_config_${configId}_lastModified`);
         queryClient.invalidateQueries({ queryKey: ['appendingConfigFiles'] });
+        if (snapshot) toast.info(`${snapshot.name} removed.`, { label: 'Undo', onClick: () => { handleFileChange(configId, snapshot); saveConfigFileMutation.mutate({ configId, file: snapshot }); } });
     };
 
     const clearAllFiles = () => {

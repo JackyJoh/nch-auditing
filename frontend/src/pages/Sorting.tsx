@@ -102,17 +102,23 @@ const Sorting: React.FC = () => {
     });
 
     const clearMasterFile = () => {
+        const snapshot = masterFile;
         setMasterFile(null);
         localStorage.removeItem('sorting_master');
         localStorage.removeItem('sorting_master_name');
+        localStorage.removeItem('sorting_master_lastModified');
         queryClient.invalidateQueries({ queryKey: ['sortingMasterFile'] });
+        if (snapshot) toast.info(`${snapshot.name} removed.`, { label: 'Undo', onClick: () => { setMasterFile(snapshot); saveMasterFileMutation.mutate(snapshot); } });
     };
 
     const clearZipFile = () => {
+        const snapshot = zipFile;
         setZipFile(null);
         localStorage.removeItem('sorting_zip');
         localStorage.removeItem('sorting_zip_name');
+        localStorage.removeItem('sorting_zip_lastModified');
         queryClient.invalidateQueries({ queryKey: ['sortingZipFile'] });
+        if (snapshot) toast.info(`${snapshot.name} removed.`, { label: 'Undo', onClick: () => { setZipFile(snapshot); saveZipFileMutation.mutate(snapshot); } });
     };
 
     const clearAllFiles = () => {

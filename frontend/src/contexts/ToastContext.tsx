@@ -3,17 +3,20 @@ import ReactDOM from 'react-dom';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
+type ActionOption = { label: string; onClick: () => void };
+
 interface ToastItem {
   id: number;
   type: ToastType;
   message: string;
+  action?: ActionOption;
 }
 
 type ToastAPI = {
-  success: (message: string) => void;
-  error: (message: string) => void;
-  warning: (message: string) => void;
-  info: (message: string) => void;
+  success: (message: string, action?: ActionOption) => void;
+  error: (message: string, action?: ActionOption) => void;
+  warning: (message: string, action?: ActionOption) => void;
+  info: (message: string, action?: ActionOption) => void;
 };
 
 const ToastContext = createContext<ToastAPI | undefined>(undefined);
@@ -35,17 +38,17 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const add = useCallback((type: ToastType, message: string) => {
+  const add = useCallback((type: ToastType, message: string, action?: ActionOption) => {
     const id = nextId++;
-    setToasts(prev => [...prev, { id, type, message }]);
+    setToasts(prev => [...prev, { id, type, message, action }]);
     setTimeout(() => remove(id), DURATION);
   }, [remove]);
 
   const api: ToastAPI = {
-    success: (msg) => add('success', msg),
-    error:   (msg) => add('error', msg),
-    warning: (msg) => add('warning', msg),
-    info:    (msg) => add('info', msg),
+    success: (msg, action) => add('success', msg, action),
+    error:   (msg, action) => add('error', msg, action),
+    warning: (msg, action) => add('warning', msg, action),
+    info:    (msg, action) => add('info', msg, action),
   };
 
   return (
@@ -62,6 +65,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               >
                 <span className={`${s.iconColor} font-bold text-base flex-shrink-0 mt-0.5`}>{s.icon}</span>
                 <p className="text-white/90 text-sm leading-snug flex-1">{t.message}</p>
+                {t.action && (
+                  <button
+                    onClick={() => { t.action!.onClick(); remove(t.id); }}
+                    className="text-indigo-400 hover:text-indigo-300 text-xs font-semibold transition-colors flex-shrink-0"
+                  >
+                    {t.action.label}
+                  </button>
+                )}
                 <button
                   onClick={() => remove(t.id)}
                   className="text-white/40 hover:text-white/80 transition-colors flex-shrink-0"

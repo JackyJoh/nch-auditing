@@ -4,6 +4,7 @@ import Layout from '../Layout';
 import { FilePreviewButton, FileInfoBadge } from '../components/FilePreviewModal';
 import { useToast } from '../contexts/ToastContext';
 import LoadingOverlay from '../components/LoadingOverlay';
+import { parseSpreadsheetPreview } from '../utils/parseSpreadsheet';
 
 const Contacts = () => {
     const toast = useToast();
@@ -14,6 +15,7 @@ const Contacts = () => {
     const [loading, setLoading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [showValidation, setShowValidation] = useState(false);
+    const [fileHeaders, setFileHeaders] = useState<string[]>([]);
 
     // Get API base URL from environment variable, fallback to empty string for local development
     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
@@ -146,13 +148,25 @@ const Contacts = () => {
         return () => window.removeEventListener('keydown', handler);
     }, [file, contactHeader, phoneHeader, loading]);
 
+    useEffect(() => {
+        if (!file) { setFileHeaders([]); return; }
+        parseSpreadsheetPreview(file, 1).then(d => setFileHeaders(d.headers)).catch(() => setFileHeaders([]));
+    }, [file]);
+
     const clearFile = () => {
+        const snapshot = file;
         setFile(null);
         setFileName('');
         localStorage.removeItem('contactsFile');
         localStorage.removeItem('contactsFileName');
         localStorage.removeItem('contactsFileLastModified');
         queryClient.invalidateQueries({ queryKey: ['contactsFile'] });
+        if (snapshot) {
+            toast.info(`${snapshot.name} removed.`, {
+                label: 'Undo',
+                onClick: () => { setFile(snapshot); setFileName(snapshot.name); saveFileMutation.mutate(snapshot); },
+            });
+        }
     };
 
     
@@ -302,6 +316,16 @@ const Contacts = () => {
                                     className={`block w-full text-white bg-slate-900/40 border rounded-lg px-4 py-2 ${showValidation && !contactHeader ? 'border-red-500/60' : 'border-slate-600/50'}`}
                                 />
                                 {showValidation && !contactHeader && <p className="text-red-400 text-xs mt-1">Required</p>}
+                                {fileHeaders.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                        {fileHeaders.map(h => (
+                                            <button key={h} type="button"
+                                                onClick={() => { setContactHeader(h); localStorage.setItem('contacts_contactHeader', h); }}
+                                                className="px-2 py-0.5 text-xs rounded-md bg-slate-700/60 border border-slate-600/50 text-white/60 hover:text-white hover:border-indigo-500/50 transition-colors duration-150"
+                                            >{h}</button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             {/* Phone Number Column Header Input */}
                             <div className="mb-6">
@@ -318,6 +342,16 @@ const Contacts = () => {
                                     className={`block w-full text-white bg-slate-900/40 border rounded-lg px-4 py-2 ${showValidation && !phoneHeader ? 'border-red-500/60' : 'border-slate-600/50'}`}
                                 />
                                 {showValidation && !phoneHeader && <p className="text-red-400 text-xs mt-1">Required</p>}
+                                {fileHeaders.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                        {fileHeaders.map(h => (
+                                            <button key={h} type="button"
+                                                onClick={() => { setPhoneHeader(h); localStorage.setItem('contacts_phoneHeader', h); }}
+                                                className="px-2 py-0.5 text-xs rounded-md bg-slate-700/60 border border-slate-600/50 text-white/60 hover:text-white hover:border-indigo-500/50 transition-colors duration-150"
+                                            >{h}</button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="bg-slate-700/60 border border-slate-600/50 rounded-xl shadow-lg p-4 mt-4 w-full flex flex-col items-center">
